@@ -41,10 +41,11 @@ export default class MessageContainer extends React.Component {
     const messagesData = this.prepareMessages(props.messages.reverse());
     this.state = {
       dataSource: messagesData,
-      listPos: 0,
-      listPosBeforeKeyboardOpened: 0,
-      flatListContentHeight: 0,
-      flatListHeight: 0,
+      listContentHeight: 0,
+      listScrollPosition: 0,
+      listParentHeight: 0,
+      listHeight: 0,
+
     };
   }
   componentWillMount(){
@@ -60,15 +61,36 @@ export default class MessageContainer extends React.Component {
   onKeyboardChange(e) {
     //console.log('onKeyboardChange', e) ;
     const { endCoordinates, startCoordinates } = e;
-    console.log('this.state.listPos', this.state.listPos);
-    console.log('this.state.listPosBeforeKeyboardOpened', this.state.listPosBeforeKeyboardOpened);
+    console.log(e);
     if ( endCoordinates.screenY < startCoordinates.screenY){
-      this.setState({
-        listPosBeforeKeyboardOpened: this.state.listPos
-      })
-      this._invertibleScrollViewRef.scrollToOffset({offset: this.state.flatListHeight - this.state.flatListContentHeight, animated:true});
+      let offset = 0;
+      console.log('Keyboard opend');
+      console.log('listContentHeight: ' + this.state.listContentHeight);
+      console.log('listHeight: ' + this.state.listHeight);
+      console.log('---------------------');
+
+      if ( this.state.listContentHeight > this.state.listHeight ){
+        if ( this.state.listScrollPosition == this.state.listContentHeight - this.state.listHeight ){
+          offset = this.state.listContentHeight - ( this.state.listHeight - endCoordinates.height );
+        } else {
+          offset = this.state.listContentHeight - ( this.state.listHeight - endCoordinates.height ) - ( (this.state.listContentHeight - this.state.listHeight) - this.state.listScrollPosition );
+        }
+
+
+
+      } else {
+        offset = this.state.listContentHeight - ( this.state.listHeight - endCoordinates.height );
+      }
+
+      console.log('Offset: ', offset);
+
+      if ( offset <= 0 )
+         offset = 0
+
+      this._invertibleScrollViewRef.scrollToOffset({offset: offset, animated:true});
+
     } else {
-      console.log('Back to: ', this.state.listPosBeforeKeyboardOpened);
+
       //this._invertibleScrollViewRef.scrollToOffset({offset: this.state.listPosBeforeKeyboardOpened , animated:true});
     }
 
@@ -155,6 +177,11 @@ export default class MessageContainer extends React.Component {
   }
 
   renderFooter() {
+
+    return(
+      <View style={{height: 2, backgroundColor: '#fff'}}></View>
+    )
+
     if (this.props.renderFooter) {
       const footerProps = {
         ...this.props,
@@ -194,30 +221,33 @@ export default class MessageContainer extends React.Component {
 
   onLayout(e) {
     const { layout } = e.nativeEvent;
-    console.log('Flatlist layout: ', layout);
+    console.log('List height: ', layout.height);
     this.setState({
-      listPos: layout.y,
-      flatListHeight: layout.height
+      listHeight: layout.height
     })
   }
   onOutterViewLayout(e) {
     const { layout } = e.nativeEvent;
-    console.log('Flatlist container layout: ', layout);
+    console.log('List parent height: ', layout.height);
+    this.setState({
+      listParentHeight: layout.height
+    })
   }
   onScrollEnd(e) {
 
     let contentOffset = e.nativeEvent.contentOffset;
     let viewSize = e.nativeEvent.layoutMeasurement;
 
-    console.log('onScrollEnd',contentOffset.y);
+    console.log('Scroll position:',contentOffset.y);
+
     this.setState({
-      listPos: contentOffset.y
+      listScrollPosition: contentOffset.y
     })
   }
   onContentSizeChange(contentWidth, contentHeight){
-    console.log('onContentSizeChange', contentHeight);
+    console.log('List content height: ', contentHeight);
     this.setState({
-      flatListContentHeight: contentHeight
+      listContentHeight: contentHeight
     })
   }
   _keyExtractor = (item, index) => {
@@ -228,7 +258,6 @@ export default class MessageContainer extends React.Component {
     const contentContainerStyle = this.props.inverted
       ? {}
       : styles.notInvertedContentContainerStyle;
-    console.log('composerHeight', this.props.composerHeight);
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container]}>
           <FlatList
@@ -240,7 +269,10 @@ export default class MessageContainer extends React.Component {
             onScrollEndDrag={this.onScrollEnd}
             onContentSizeChange={this.onContentSizeChange}
             ref={(component) => (this._invertibleScrollViewRef = component)}
-            style={{ marginBottom: this.props.composerHeight, paddingTop:5}}
+            ListFooterComponent={this.renderFooter}
+            style={{backgroundColor: '#fff',
+                    marginBottom: this.props.composerHeight,
+                    paddingTop:5, paddingBottom: 55}}
           />
       </View>
     );
@@ -251,6 +283,7 @@ export default class MessageContainer extends React.Component {
 const styles = StyleSheet.create({
   container: {
     flex:1,
+    backgroundColor: '#000'
   },
   notInvertedContentContainerStyle: {
     justifyContent: 'flex-end',
