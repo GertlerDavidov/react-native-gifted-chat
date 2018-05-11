@@ -35,6 +35,7 @@ export default class MessageContainer extends React.Component {
     this.onKeyboardDidHide = this.onKeyboardDidHide.bind(this);
     this.onKeyboardChange = this.onKeyboardChange.bind(this);
 
+    this.onContentSizeChange = this.onContentSizeChange.bind(this);
 
 
     const messagesData = this.prepareMessages(props.messages.reverse());
@@ -42,6 +43,8 @@ export default class MessageContainer extends React.Component {
       dataSource: messagesData,
       listPos: 0,
       listPosBeforeKeyboardOpened: 0,
+      flatListContentHeight: 0,
+      flatListHeight: 0,
     };
   }
   componentWillMount(){
@@ -63,7 +66,7 @@ export default class MessageContainer extends React.Component {
       this.setState({
         listPosBeforeKeyboardOpened: this.state.listPos
       })
-      this._invertibleScrollViewRef.scrollToOffset({offset: this.state.listPos + (216), animated:true});
+      this._invertibleScrollViewRef.scrollToOffset({offset: this.state.flatListHeight - this.state.flatListContentHeight, animated:true});
     } else {
       console.log('Back to: ', this.state.listPosBeforeKeyboardOpened);
       //this._invertibleScrollViewRef.scrollToOffset({offset: this.state.listPosBeforeKeyboardOpened , animated:true});
@@ -191,12 +194,15 @@ export default class MessageContainer extends React.Component {
 
   onLayout(e) {
     const { layout } = e.nativeEvent;
+    console.log('Flatlist layout: ', layout);
     this.setState({
-      listPos: layout.y
+      listPos: layout.y,
+      flatListHeight: layout.height
     })
   }
   onOutterViewLayout(e) {
     const { layout } = e.nativeEvent;
+    console.log('Flatlist container layout: ', layout);
   }
   onScrollEnd(e) {
 
@@ -208,7 +214,12 @@ export default class MessageContainer extends React.Component {
       listPos: contentOffset.y
     })
   }
-
+  onContentSizeChange(contentWidth, contentHeight){
+    console.log('onContentSizeChange', contentHeight);
+    this.setState({
+      flatListContentHeight: contentHeight
+    })
+  }
   _keyExtractor = (item, index) => {
     return item.hash
   };
@@ -217,10 +228,9 @@ export default class MessageContainer extends React.Component {
     const contentContainerStyle = this.props.inverted
       ? {}
       : styles.notInvertedContentContainerStyle;
-
+    console.log('composerHeight', this.props.composerHeight);
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container]}>
-
           <FlatList
             keyExtractor={this._keyExtractor}
             data={this.state.dataSource}
@@ -228,10 +238,10 @@ export default class MessageContainer extends React.Component {
             onLayout={this.onLayout}
             onMomentumScrollEnd={this.onScrollEnd}
             onScrollEndDrag={this.onScrollEnd}
+            onContentSizeChange={this.onContentSizeChange}
             ref={(component) => (this._invertibleScrollViewRef = component)}
-            style={{ marginBottom:70, paddingTop:5}}
+            style={{ marginBottom: this.props.composerHeight, paddingTop:5}}
           />
-
       </View>
     );
   }

@@ -319,6 +319,7 @@ class GiftedChat extends React.Component {
           {...this.props}
           messages={this.getMessages()}
           ref={(component) => (this._messageContainerRef = component)}
+          composerHeight={this.state.composerHeight}
         />
         {this.renderChatFooter()}
       </View>
