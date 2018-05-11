@@ -1,16 +1,32 @@
+/* eslint no-use-before-define: ["error", { "variables": false }] */
+
+import PropTypes from 'prop-types';
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-} from 'react-native';
+import { StyleSheet, View, Keyboard, ViewPropTypes } from 'react-native';
 
 import Composer from './Composer';
 import Send from './Send';
+import Actions from './Actions';
+import Color from './Color';
 
 export default class InputToolbar extends React.Component {
+
+  constructor(props) {
+    super(props);
+  }
+
+  componentWillMount() {
+  }
+
+  componentWillUnmount() {
+  }
+
+
   renderActions() {
     if (this.props.renderActions) {
       return this.props.renderActions(this.props);
+    } else if (this.props.onPressActionButton) {
+      return <Actions {...this.props} />;
     }
     return null;
   }
@@ -19,7 +35,7 @@ export default class InputToolbar extends React.Component {
     if (this.props.renderSend) {
       return this.props.renderSend(this.props);
     }
-    return <Send {...this.props}/>;
+    return <Send {...this.props} />;
   }
 
   renderComposer() {
@@ -27,11 +43,7 @@ export default class InputToolbar extends React.Component {
       return this.props.renderComposer(this.props);
     }
 
-    return (
-      <Composer
-        {...this.props}
-      />
-    );
+    return <Composer {...this.props} />;
   }
 
   renderAccessory() {
@@ -47,7 +59,10 @@ export default class InputToolbar extends React.Component {
 
   render() {
     return (
-      <View style={[styles.container, this.props.containerStyle]}>
+      <View
+        style={[styles.container, this.props.containerStyle]}
+        onLayout={this.props.onInputToolbarLayout}
+      >
         <View style={[styles.primary, this.props.primaryStyle]}>
           {this.renderActions()}
           {this.renderComposer()}
@@ -57,13 +72,18 @@ export default class InputToolbar extends React.Component {
       </View>
     );
   }
+
 }
 
 const styles = StyleSheet.create({
   container: {
+    position:'absolute',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#b2b2b2',
-    backgroundColor: '#FFFFFF',
+    borderTopColor: Color.defaultColor,
+    backgroundColor: Color.white,
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   primary: {
     flexDirection: 'row',
@@ -82,14 +102,16 @@ InputToolbar.defaultProps = {
   containerStyle: {},
   primaryStyle: {},
   accessoryStyle: {},
+  onPressActionButton: () => {},
 };
 
 InputToolbar.propTypes = {
-  renderAccessory: React.PropTypes.func,
-  renderActions: React.PropTypes.func,
-  renderSend: React.PropTypes.func,
-  renderComposer: React.PropTypes.func,
-  containerStyle: View.propTypes.style,
-  primaryStyle: View.propTypes.style,
-  accessoryStyle: View.propTypes.style,
+  renderAccessory: PropTypes.func,
+  renderActions: PropTypes.func,
+  renderSend: PropTypes.func,
+  renderComposer: PropTypes.func,
+  onPressActionButton: PropTypes.func,
+  containerStyle: ViewPropTypes.style,
+  primaryStyle: ViewPropTypes.style,
+  accessoryStyle: ViewPropTypes.style,
 };
