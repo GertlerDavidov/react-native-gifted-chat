@@ -9,7 +9,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import { ListView, View, StyleSheet } from 'react-native';
+import { FlatList, View, StyleSheet, Keyboard } from 'react-native';
 
 import shallowequal from 'shallowequal';
 import InvertibleScrollView from 'react-native-invertible-scroll-view';
@@ -25,27 +25,67 @@ export default class MessageContainer extends React.Component {
     this.renderRow = this.renderRow.bind(this);
     this.renderFooter = this.renderFooter.bind(this);
     this.renderLoadEarlier = this.renderLoadEarlier.bind(this);
-    this.renderScrollComponent = this.renderScrollComponent.bind(this);
 
-    const dataSource = new ListView.DataSource({
-      rowHasChanged: (r1, r2) => {
-        return r1.hash !== r2.hash;
-      },
-    });
+    this.onLayout = this.onLayout.bind(this)
+    this.onOutterViewLayout = this.onOutterViewLayout.bind(this)
 
-    const messagesData = this.prepareMessages(props.messages);
+    this.onScrollEnd = this.onScrollEnd.bind(this)
+
+    this.onKeyboardDidShow = this.onKeyboardDidShow.bind(this);
+    this.onKeyboardDidHide = this.onKeyboardDidHide.bind(this);
+    this.onKeyboardChange = this.onKeyboardChange.bind(this);
+
+    this.onContentSizeChange = this.onContentSizeChange.bind(this);
+
+
+    const messagesData = this.prepareMessages(props.messages.reverse());
     this.state = {
-      dataSource: dataSource.cloneWithRows(messagesData.blob, messagesData.keys),
+      dataSource: messagesData,
+      listPos: 0,
+      listPosBeforeKeyboardOpened: 0,
+      flatListContentHeight: 0,
+      flatListHeight: 0,
     };
+  }
+  componentWillMount(){
+    this.keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', this.onKeyboardDidShow);
+    this.keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', this.onKeyboardDidHide);
+    this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
+  }
+  componentWillUnmount(){
+    this.keyboardDidShowListener.remove();
+    this.keyboardDidHideListener.remove();
+    this.keyboardWillChangeFrameListener.remove();
+  }
+  onKeyboardChange(e) {
+    //console.log('onKeyboardChange', e) ;
+    const { endCoordinates, startCoordinates } = e;
+    console.log('this.state.listPos', this.state.listPos);
+    console.log('this.state.listPosBeforeKeyboardOpened', this.state.listPosBeforeKeyboardOpened);
+    if ( endCoordinates.screenY < startCoordinates.screenY){
+      this.setState({
+        listPosBeforeKeyboardOpened: this.state.listPos
+      })
+      this._invertibleScrollViewRef.scrollToOffset({offset: this.state.flatListHeight - this.state.flatListContentHeight, animated:true});
+    } else {
+      console.log('Back to: ', this.state.listPosBeforeKeyboardOpened);
+      //this._invertibleScrollViewRef.scrollToOffset({offset: this.state.listPosBeforeKeyboardOpened , animated:true});
+    }
+
+  }
+  onKeyboardDidShow(e) {
+  }
+  onKeyboardDidHide(e) {
   }
 
   componentWillReceiveProps(nextProps) {
     if (this.props.messages === nextProps.messages) {
       return;
     }
-    const messagesData = this.prepareMessages(nextProps.messages);
+    const messagesData = this.prepareMessages(nextProps.messages.reverse());
+
     this.setState({
-      dataSource: this.state.dataSource.cloneWithRows(messagesData.blob, messagesData.keys),
+      dataSource: messagesData,
     });
   }
 
@@ -60,6 +100,22 @@ export default class MessageContainer extends React.Component {
   }
 
   prepareMessages(messages) {
+
+    let tmp = messages.reduce((o, m, i) => {
+                const previousMessage = messages[i + 1] || {};
+                const nextMessage = messages[i - 1] || {};
+                // add next and previous messages to hash to ensure updates
+                const toHash = JSON.stringify(m) + previousMessage._id + nextMessage._id;
+                o.push({
+                  ...m,
+                  previousMessage,
+                  nextMessage,
+                  hash: md5(toHash),
+                });
+                return o;
+              }, [])
+
+    return tmp
     return {
       keys: messages.map((m) => m._id),
       blob: messages.reduce((o, m, i) => {
@@ -80,6 +136,9 @@ export default class MessageContainer extends React.Component {
 
   scrollTo(options) {
     this._invertibleScrollViewRef.scrollTo(options);
+  }
+  scrollToEnd(){
+    this._invertibleScrollViewRef.scrollToEnd();
   }
 
   renderLoadEarlier() {
@@ -105,7 +164,9 @@ export default class MessageContainer extends React.Component {
     return null;
   }
 
-  renderRow(message) {
+  renderRow({item, index}) {
+    let message = item
+
     if (!message._id && message._id !== 0) {
       console.warn('GiftedChat: `_id` is missing for message', JSON.stringify(message));
     }
@@ -131,37 +192,56 @@ export default class MessageContainer extends React.Component {
     return <Message {...messageProps} />;
   }
 
-  renderScrollComponent(props) {
-    const { invertibleScrollViewProps } = this.props;
-    return (
-      <InvertibleScrollView
-        {...props}
-        {...invertibleScrollViewProps}
-        ref={(component) => (this._invertibleScrollViewRef = component)}
-      />
-    );
+  onLayout(e) {
+    const { layout } = e.nativeEvent;
+    console.log('Flatlist layout: ', layout);
+    this.setState({
+      listPos: layout.y,
+      flatListHeight: layout.height
+    })
   }
+  onOutterViewLayout(e) {
+    const { layout } = e.nativeEvent;
+    console.log('Flatlist container layout: ', layout);
+  }
+  onScrollEnd(e) {
+
+    let contentOffset = e.nativeEvent.contentOffset;
+    let viewSize = e.nativeEvent.layoutMeasurement;
+
+    console.log('onScrollEnd',contentOffset.y);
+    this.setState({
+      listPos: contentOffset.y
+    })
+  }
+  onContentSizeChange(contentWidth, contentHeight){
+    console.log('onContentSizeChange', contentHeight);
+    this.setState({
+      flatListContentHeight: contentHeight
+    })
+  }
+  _keyExtractor = (item, index) => {
+    return item.hash
+  };
 
   render() {
     const contentContainerStyle = this.props.inverted
-      ? {'flexGrow': 1, 'justifyContent': 'flex-end'}
+      ? {}
       : styles.notInvertedContentContainerStyle;
-
+    console.log('composerHeight', this.props.composerHeight);
     return (
-      <View style={styles.container}>
-        <ListView
-          enableEmptySections
-          automaticallyAdjustContentInsets={false}
-          initialListSize={20}
-          pageSize={20}
-          {...this.props.listViewProps}
-          dataSource={this.state.dataSource}
-          contentContainerStyle={contentContainerStyle}
-          renderRow={this.renderRow}
-          renderHeader={this.props.inverted ? this.renderFooter : this.renderLoadEarlier}
-          renderFooter={this.props.inverted ? this.renderLoadEarlier : this.renderFooter}
-          renderScrollComponent={this.renderScrollComponent}
-        />
+      <View onLayout={this.onOutterViewLayout} style={[styles.container]}>
+          <FlatList
+            keyExtractor={this._keyExtractor}
+            data={this.state.dataSource}
+            renderItem={this.renderRow}
+            onLayout={this.onLayout}
+            onMomentumScrollEnd={this.onScrollEnd}
+            onScrollEndDrag={this.onScrollEnd}
+            onContentSizeChange={this.onContentSizeChange}
+            ref={(component) => (this._invertibleScrollViewRef = component)}
+            style={{ marginBottom: this.props.composerHeight, paddingTop:5}}
+          />
       </View>
     );
   }
@@ -170,7 +250,7 @@ export default class MessageContainer extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex:1,
   },
   notInvertedContentContainerStyle: {
     justifyContent: 'flex-end',
@@ -186,7 +266,6 @@ MessageContainer.defaultProps = {
   inverted: true,
   loadEarlier: false,
   listViewProps: {},
-  invertibleScrollViewProps: {},
 };
 
 MessageContainer.propTypes = {
@@ -199,5 +278,4 @@ MessageContainer.propTypes = {
   listViewProps: PropTypes.object,
   inverted: PropTypes.bool,
   loadEarlier: PropTypes.bool,
-  invertibleScrollViewProps: PropTypes.object,
 };

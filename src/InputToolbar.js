@@ -13,36 +13,14 @@ export default class InputToolbar extends React.Component {
 
   constructor(props) {
     super(props);
-
-    this.keyboardWillShow = this.keyboardWillShow.bind(this);
-    this.keyboardWillHide = this.keyboardWillHide.bind(this);
-
-    this.state = {
-      position: 'absolute',
-    };
   }
 
   componentWillMount() {
-    this.keyboardWillShowListener = Keyboard.addListener('keyboardWillShow', this.keyboardWillShow);
-    this.keyboardWillHideListener = Keyboard.addListener('keyboardWillHide', this.keyboardWillHide);
   }
 
   componentWillUnmount() {
-    this.keyboardWillShowListener.remove();
-    this.keyboardWillHideListener.remove();
   }
 
-  keyboardWillShow() {
-    this.setState({
-      position: 'relative',
-    });
-  }
-
-  keyboardWillHide() {
-    this.setState({
-      position: 'absolute',
-    });
-  }
 
   renderActions() {
     if (this.props.renderActions) {
@@ -82,7 +60,8 @@ export default class InputToolbar extends React.Component {
   render() {
     return (
       <View
-        style={[styles.container, this.props.containerStyle, { position: this.state.position }]}
+        style={[styles.container, this.props.containerStyle]}
+        onLayout={this.props.onInputToolbarLayout}
       >
         <View style={[styles.primary, this.props.primaryStyle]}>
           {this.renderActions()}
@@ -98,6 +77,7 @@ export default class InputToolbar extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
+    position:'absolute',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Color.defaultColor,
     backgroundColor: Color.white,

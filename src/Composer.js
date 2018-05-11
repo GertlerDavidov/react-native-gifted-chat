@@ -4,9 +4,6 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import { Platform, StyleSheet, TextInput } from 'react-native';
 
-import { MIN_COMPOSER_HEIGHT, DEFAULT_PLACEHOLDER } from './Constant';
-import Color from './Color';
-
 export default class Composer extends React.Component {
 
   onContentSizeChange(e) {
@@ -38,7 +35,7 @@ export default class Composer extends React.Component {
         onChange={(e) => this.onContentSizeChange(e)}
         onContentSizeChange={(e) => this.onContentSizeChange(e)}
         onChangeText={(text) => this.onChangeText(text)}
-        style={[styles.textInput, this.props.textInputStyle, { height: this.props.composerHeight }]}
+        style={[styles.textInput, this.props.textInputStyle]}
         autoFocus={this.props.textInputAutoFocus}
         value={this.props.text}
         accessibilityLabel={this.props.text || this.props.placeholder}
@@ -70,10 +67,13 @@ const styles = StyleSheet.create({
 });
 
 Composer.defaultProps = {
-  composerHeight: MIN_COMPOSER_HEIGHT,
+  composerHeight: Platform.select({
+    ios: 33,
+    android: 41,
+  }),
   text: '',
-  placeholderTextColor: Color.defaultProps,
-  placeholder: DEFAULT_PLACEHOLDER,
+  placeholderTextColor: '#b2b2b2',
+  placeholder: '',
   textInputProps: null,
   multiline: true,
   textInputStyle: {},
