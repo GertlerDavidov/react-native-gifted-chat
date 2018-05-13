@@ -109,6 +109,7 @@ export default class MessageContainer extends React.Component {
     this.setState({
       dataSource: messagesData,
     });
+
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -160,7 +161,9 @@ export default class MessageContainer extends React.Component {
     this._invertibleScrollViewRef.scrollTo(options);
   }
   scrollToEnd(){
-    this._invertibleScrollViewRef.scrollToEnd();
+    let bottom = this.state.listContentHeight - this.state.listHeight;
+    console.log('Scrolling to:', bottom);
+    this._invertibleScrollViewRef.scrollToOffset({offset: bottom, animated:true});
   }
 
   renderLoadEarlier() {

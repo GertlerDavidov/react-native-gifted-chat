@@ -77,7 +77,6 @@ export default class InputToolbar extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    height: 44,
     position:'absolute',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Color.defaultColor,

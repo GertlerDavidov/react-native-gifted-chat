@@ -345,7 +345,11 @@ class GiftedChat extends React.Component {
     }
 
     this.props.onSend(messages);
-    this.scrollToBottom();
+    setTimeout(()=>{
+      console.log('Scroll to bottom');
+      this.scrollToBottom();},
+      750)
+
 
     if (shouldResetInputToolbar === true) {
       setTimeout(() => {
@@ -442,6 +446,7 @@ class GiftedChat extends React.Component {
   onInputToolbarLayout(e) {
     // fix an issue when keyboard is dismissing during the initialization
     const { layout } = e.nativeEvent;
+    console.log('InputToolbar layout: ', layout.height);
     this.setState({
       messagesContainerHeight: Dimensions.get('window').height - layout.height - 54,
       composerHeight: layout.height,
