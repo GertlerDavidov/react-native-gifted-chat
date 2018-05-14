@@ -15,13 +15,6 @@ export default class InputToolbar extends React.Component {
     super(props);
   }
 
-  componentWillMount() {
-  }
-
-  componentWillUnmount() {
-  }
-
-
   renderActions() {
     if (this.props.renderActions) {
       return this.props.renderActions(this.props);
@@ -87,7 +80,10 @@ const styles = StyleSheet.create({
   },
   primary: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent:'center',
+    paddingVertical: 5,
+
   },
   accessory: {
     height: 44,
