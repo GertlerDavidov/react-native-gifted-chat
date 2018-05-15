@@ -73,7 +73,21 @@ export default class MessageContainer extends React.Component {
     //console.log('onKeyboardChange', e) ;
     const { endCoordinates, startCoordinates } = e;
     console.log(e);
-    if ( endCoordinates.screenY < startCoordinates.screenY){
+    if ( endCoordinates.screenY < startCoordinates.screenY ){
+      this.onListLayoutChange(false, startCoordinates.height)
+    } else {
+      console.log('Keyboard CLOSED');
+      this.onListLayoutChange(true, startCoordinates.height)
+    }
+
+  }
+  onKeyboardDidShow(e) {
+  }
+  onKeyboardDidHide(e) {
+  }
+
+  onListLayoutChange(growStatus, changedHeight){
+    if ( !growStatus ){
       let offset = 0;
       console.log('Keyboard opend');
       console.log('listContentHeight: ' + this.state.listContentHeight);
@@ -82,8 +96,8 @@ export default class MessageContainer extends React.Component {
       console.log('---------------------');
 
       this.setState({
-        listParentHeight:this.state.listParentHeight - startCoordinates.height,
-        listHeight: this.state.listHeight - startCoordinates.height
+        listParentHeight:this.state.listParentHeight - changedHeight,
+        listHeight: this.state.listHeight - changedHeight
       })
 
       console.log('listHeight: ' + this.state.listHeight);
@@ -96,7 +110,7 @@ export default class MessageContainer extends React.Component {
 
         if ( this.state.listScrollPosition == this.state.listContentHeight - this.state.listHeight){
           console.log('Content position at bottom');
-          offset = this.state.listContentHeight - ( this.state.listHeight - endCoordinates.height );
+          offset = this.state.listContentHeight - ( this.state.listHeight - changedHeight );
         } else {
 
             console.log('Content position somewhere');
@@ -113,27 +127,30 @@ export default class MessageContainer extends React.Component {
          offset = 0
       }
       this._invertibleScrollViewRef.scrollToOffset({offset: offset, animated:true});
-    } else {
-      console.log('Keyboard CLOSED');
-      let newPos = this.state.listScrollPosition - (startCoordinates.height);
+    }
+    else {
+      let newPos = this.state.listScrollPosition - (changedHeight);
       if ( newPos < 0 )
         newPos = 0
       this.setState({
-        listParentHeight:this.state.listParentHeight + (startCoordinates.height),
-        listHeight: this.state.listHeight + (startCoordinates.height),
+        listParentHeight:this.state.listParentHeight + (changedHeight),
+        listHeight: this.state.listHeight + (changedHeight),
         listScrollPosition: newPos
       })
-
-      //this._invertibleScrollViewRef.scrollToOffset({offset: 69.5 , animated:true});
     }
 
   }
-  onKeyboardDidShow(e) {
-  }
-  onKeyboardDidHide(e) {
-  }
+
 
   componentWillReceiveProps(nextProps) {
+
+    if ( this.props.inputToolbarHeight != nextProps.inputToolbarHeight )
+      if ( this.props.inputToolbarHeight < nextProps.inputToolbarHeight ){
+        this.onListLayoutChange(false, nextProps.inputToolbarHeight - this.props.inputToolbarHeight)
+      } else if ( this.props.inputToolbarHeight > nextProps.inputToolbarHeight ) {
+                this.onListLayoutChange(true, this.props.inputToolbarHeight - nextProps.inputToolbarHeight)
+             }
+
 
     if (this.props.messages === nextProps.messages || nextProps.messages == 0) {
       return;
@@ -236,10 +253,6 @@ export default class MessageContainer extends React.Component {
 
   renderFooter() {
 
-    return(
-      <View style={{height: 10, backgroundColor: 'red'}}></View>
-    )
-
     if (this.props.renderFooter) {
       const footerProps = {
         ...this.props,
@@ -251,7 +264,7 @@ export default class MessageContainer extends React.Component {
   renderHeader() {
 
     return(
-      <View style={{height: 10, backgroundColor: 'red'}}></View>
+      <View style={{height: 10, backgroundColor: '#FFF'}}></View>
     )
 
     if (this.props.renderHeader) {

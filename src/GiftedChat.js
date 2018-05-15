@@ -439,6 +439,7 @@ class GiftedChat extends React.Component {
   onInputToolbarLayout(e) {
     // fix an issue when keyboard is dismissing during the initialization
     const { layout } = e.nativeEvent;
+    console.log('onInputToolbarLayout', layout);
 
     this.setState({
       messagesContainerHeight: Dimensions.get('window').height - layout.height - 54,
@@ -491,10 +492,12 @@ class GiftedChat extends React.Component {
   render() {
     if (this.state.isInitialized === true) {
       return (
-        <View style={styles.container}>
-          {this.renderMessages()}
-          {this.renderInputToolbar()}
-        </View>
+        <ActionSheet ref={(component) => (this._actionSheetRef = component)}>
+          <View style={styles.container}>
+            {this.renderMessages()}
+            {this.renderInputToolbar()}
+          </View>
+        </ActionSheet>
       );
     }
     return (
