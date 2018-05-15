@@ -9,7 +9,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import { FlatList, View, StyleSheet, Keyboard, Dimensions } from 'react-native';
+import { FlatList, View, StyleSheet, Keyboard, Dimensions, Animated, Text, TouchableOpacity, Platform } from 'react-native';
 
 import shallowequal from 'shallowequal';
 import InvertibleScrollView from 'react-native-invertible-scroll-view';
@@ -17,6 +17,9 @@ import md5 from 'md5';
 import LoadEarlier from './LoadEarlier';
 import Message from './Message';
 
+import Icon from 'react-native-vector-icons/FontAwesome';
+import IconBadge                   from 'react-native-icon-badge';
+import RotateText                  from "react-native-ticker";
 export default class MessageContainer extends React.Component {
 
   constructor(props) {
@@ -31,12 +34,16 @@ export default class MessageContainer extends React.Component {
     this.onOutterViewLayout   = this.onOutterViewLayout.bind(this)
 
     this.onScrollEnd          = this.onScrollEnd.bind(this)
+    this.onScroll             = this.onScroll.bind(this)
 
     this.onKeyboardDidShow    = this.onKeyboardDidShow.bind(this);
     this.onKeyboardDidHide    = this.onKeyboardDidHide.bind(this);
     this.onKeyboardChange     = this.onKeyboardChange.bind(this);
 
     this.onContentSizeChange  = this.onContentSizeChange.bind(this);
+
+    this.scrollOffset         = 0;
+    this.scrollToBottomIconV  = false;
 
     console.log('-->INIT CHAT Step 1 <--');
     console.log('Load messages count: ', this.props.messages.length);
@@ -56,6 +63,7 @@ export default class MessageContainer extends React.Component {
       newMessagesCounter: 0,
       shouldScroll: (this.props.messages.length != 0) ? true : false,
       init: false,
+      opacity: new Animated.Value(0),
     };
   }
   componentWillMount(){
@@ -144,13 +152,15 @@ export default class MessageContainer extends React.Component {
 
   componentWillReceiveProps(nextProps) {
 
-    if ( this.props.inputToolbarHeight != nextProps.inputToolbarHeight )
+    if ( this.props.inputToolbarHeight != nextProps.inputToolbarHeight ){
+      console.log('componentWillReceiveProps current inputToolbarHeight: ', this.props.inputToolbarHeight);
+      console.log('componentWillReceiveProps next inputToolbarHeight: ', nextProps.inputToolbarHeight);
       if ( this.props.inputToolbarHeight < nextProps.inputToolbarHeight ){
         this.onListLayoutChange(false, nextProps.inputToolbarHeight - this.props.inputToolbarHeight)
       } else if ( this.props.inputToolbarHeight > nextProps.inputToolbarHeight ) {
                 this.onListLayoutChange(true, this.props.inputToolbarHeight - nextProps.inputToolbarHeight)
              }
-
+    }
 
     if (this.props.messages === nextProps.messages || nextProps.messages == 0) {
       return;
@@ -160,6 +170,12 @@ export default class MessageContainer extends React.Component {
     console.log('Current messages count: ', this.props.messages.length);
     console.log('New messages count: ', nextProps.messages.length);
     console.log('----------------------------------');
+
+    if ( !this.state.autoScroll && nextProps.messages.length > this.props.messages.length ){
+      this.setState({
+        newMessagesCounter: this.state.newMessagesCounter + (1)
+      })
+    }
 
     const messagesData = this.prepareMessages(nextProps.messages.reverse());
 
@@ -315,6 +331,7 @@ export default class MessageContainer extends React.Component {
   onOutterViewLayout(e) {
     const { layout } = e.nativeEvent;
     console.log('(onOutterViewLayout) List parent height: ', layout.height);
+    this.scrollOffset = this.state.listContentHeight - layout.height;
     return
     this.setState({
       listParentHeight: layout.height,
@@ -326,11 +343,49 @@ export default class MessageContainer extends React.Component {
     let viewSize = e.nativeEvent.layoutMeasurement;
 
     console.log('Scroll position:',contentOffset.y);
-
+    this.scrollOffset = contentOffset.y;
     this.setState({
       listScrollPosition: contentOffset.y
     })
   }
+  onScroll(e){
+    let contentOffset = e.nativeEvent.contentOffset;
+
+    var currentOffset = contentOffset.y;
+    var direction = currentOffset > this.scrollOffset ? 'down' : 'up';
+
+    this.scrollOffset = currentOffset;
+
+
+    if ( this.state.listHeight < this.state.listContentHeight ){
+
+      if ( direction == 'up' && !this.scrollToBottomIconV && this.scrollOffset < 50 ){
+        Animated.timing(this.state.opacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+        this.scrollToBottomIconV = true;
+        this.setState({
+          autoScroll: false
+        })
+      }
+
+      if ( direction == 'down' && this.scrollToBottomIconV && this.scrollOffset > 50 ){
+        Animated.timing(this.state.opacity, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+        this.scrollToBottomIconV = false;
+        this.setState({
+          newMessagesCounter: 0
+        })
+      }
+    }
+
+  }
+
   onContentSizeChange(contentWidth, contentHeight){
     console.log('--> onContentSizeChange  <--');
     console.log('List content height: ', contentHeight);
@@ -338,7 +393,9 @@ export default class MessageContainer extends React.Component {
     console.log('----------------------------------');
     this.setState({
       listContentHeight: contentHeight,
-    })
+    });
+    this.scrollOffset = contentHeight - this.state.listHeight;
+
     if ( this.state.autoScroll ){
       if ( this.state.listHeight < contentHeight)
         this.scrollToBottom(contentHeight)
@@ -348,19 +405,62 @@ export default class MessageContainer extends React.Component {
   _keyExtractor = (item, index) => {
     return item.hash
   };
-
+  scrollToBottomIcon(){
+    return(
+      <Animated.View style={[styles.scrollToBottomIcon,
+                            {opacity: this.state.opacity,
+                             transform: [{
+                               scale: this.state.opacity.interpolate({
+                                 inputRange: [0, 1],
+                                 outputRange: [0.85, 1],
+                               })
+                             },
+                           ],}]}
+                     ref={this.handleViewRef}>
+      <IconBadge
+        MainElement={
+            <TouchableOpacity style={{zIndex:9999,
+                                      height: '100%', width:'100%',
+                                      justifyContent: 'center', alignItems: 'center',}}
+                              onPress={ () => {this.scrollToBottom(this.state.listContentHeight) } } >
+              <Icon name="angle-down" size={15} color="#277d9f" />
+            </TouchableOpacity>
+        }
+        BadgeElement={
+          <RotateText text={this.state.newMessagesCounter.toString()}
+                      allowFontScaling={false}
+                      textStyle={{fontSize: 10,
+                                  color:'#FFFFFF',
+                                  textAlign: 'center'}}
+                      rotateTime={250} />
+        }
+        IconBadgeStyle={{
+          height:15,
+          left: 5 ,
+          top: -5,
+          position:'absolute',
+          paddingHorizontal: 5,
+          backgroundColor: '#cc1e40'
+        }}
+        Hidden={ (this.state.newMessagesCounter == 0) ? true : false }
+      />
+      </Animated.View>
+    )
+  }
   render() {
     const contentContainerStyle = this.props.inverted ? {}
                                       : styles.notInvertedContentContainerStyle;
 
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
+          {this.scrollToBottomIcon()}
           <FlatList
             keyExtractor={this._keyExtractor}
             data={this.state.dataSource}
             renderItem={this.renderRow}
             onLayout={this.onLayout}
-            onMomentumScrollEnd={this.onScrollEnd}
+            //onMomentumScrollEnd={this.onScrollEnd}
+            onScroll={this.onScroll}
             onScrollEndDrag={this.onScrollEnd}
             onContentSizeChange={this.onContentSizeChange}
             ref={(component) => (this._invertibleScrollViewRef = component)}
@@ -368,6 +468,7 @@ export default class MessageContainer extends React.Component {
             ListHeaderComponent={this.renderHeader}
             style={{backgroundColor: '#fff'}}
           />
+
       </View>
     );
   }
@@ -382,6 +483,19 @@ const styles = StyleSheet.create({
   notInvertedContentContainerStyle: {
     justifyContent: 'flex-end',
   },
+  scrollToBottomIcon:{
+    borderWidth: 1,
+    borderRadius: 15,
+    borderColor:'#277d9f',
+    height: 30, width: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    zIndex: 99,
+    right: 20,
+    bottom: 20,
+    backgroundColor:'#FFF'
+  }
 });
 
 MessageContainer.defaultProps = {
