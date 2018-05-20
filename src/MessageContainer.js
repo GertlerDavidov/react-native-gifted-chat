@@ -26,18 +26,18 @@ export default class MessageContainer extends React.Component {
     super(props);
 
     this.renderRow            = this.renderRow.bind(this);
-  //  this.renderFooter         = this.renderFooter.bind(this);
-  //  this.renderHeader         = this.renderHeader.bind(this);
-  //  this.renderLoadEarlier    = this.renderLoadEarlier.bind(this);
+    this.renderFooter         = this.renderFooter.bind(this);
+    //this.renderHeader         = this.renderHeader.bind(this);
+    this.renderLoadEarlier    = this.renderLoadEarlier.bind(this);
 
     this.onLayout             = this.onLayout.bind(this)
   //  this.onOutterViewLayout   = this.onOutterViewLayout.bind(this)
 
     this.onScrollEnd          = this.onScrollEnd.bind(this)
     this.onScroll             = this.onScroll.bind(this)
-  //  this.onKeyboardDidShow    = this.onKeyboardDidShow.bind(this);
-//    this.onKeyboardDidHide    = this.onKeyboardDidHide.bind(this);
-  //  this.onKeyboardChange     = this.onKeyboardChange.bind(this);
+    //this.onKeyboardDidShow    = this.onKeyboardDidShow.bind(this);
+    //this.onKeyboardDidHide    = this.onKeyboardDidHide.bind(this);
+    this.onKeyboardChange     = this.onKeyboardChange.bind(this);
 
     this.onContentSizeChange  = this.onContentSizeChange.bind(this);
 
@@ -55,6 +55,7 @@ export default class MessageContainer extends React.Component {
       shouldScroll        : (this.props.messages.length != 0) ? true : false,
       scrollToBottomIcon  : false,
       offset              : 0,
+      isLoadingEarlier    : false
     }
 
     const messagesData = this.prepareMessages(props.messages.reverse());
@@ -66,28 +67,38 @@ export default class MessageContainer extends React.Component {
       opacity             : new Animated.Value(0),
     };
   }
+  componentWillMount(){
+    //this.keyboardDidShowListener         = Keyboard.addListener('keyboardDidShow', this.onKeyboardDidShow);
+    //this.keyboardDidHideListener         = Keyboard.addListener('keyboardDidHide', this.onKeyboardDidHide);
+    this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
+  }
+  componentWillUnmount(){
+    //this.keyboardDidShowListener.remove();
+    //this.keyboardDidHideListener.remove();
+    this.keyboardWillChangeFrameListener.remove();
+  }
   componentWillReceiveProps(nextProps) {
 
+    if ( nextProps.isLoadingEarlier ){
+      this.listObj.isLoadingEarlier = true
+    } else if ( !nextProps.isLoadingEarlier && !this.props.isLoadingEarlier ){
+      this.listObj.isLoadingEarlier = false
+    }
 
-    //if ( this.props.inputToolbarHeight != nextProps.inputToolbarHeight ){
-    //  if ( this.props.inputToolbarHeight < nextProps.inputToolbarHeight ){
-    //    this.onListLayoutChange(false, nextProps.inputToolbarHeight - this.props.inputToolbarHeight)
-    //  }
-    //  else if ( this.props.inputToolbarHeight > nextProps.inputToolbarHeight ) {
-    //            this.onListLayoutChange(true, this.props.inputToolbarHeight - nextProps.inputToolbarHeight)
-    //         }
-    //}
 
     if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
       return;
     }
     console.log('componentWillReceiveProps ');
+    console.log('this.listObj.isLoadingEarlier', this.listObj.isLoadingEarlier);
 
-    //if ( !this.listObj.autoScroll && nextProps.messages.length > this.props.messages.length ){
-    //  this.setState({
-    //    newMessagesCounter: this.state.newMessagesCounter + (1)
-    //  })
-    //}
+    if ( this.listObj.scrollToBottomIcon &&
+         !this.listObj.isLoadingEarlier &&
+         nextProps.messages.length > this.props.messages.length ){
+      this.setState({
+        newMessagesCounter: this.state.newMessagesCounter + (1)
+      })
+    }
 
     const messagesData = this.prepareMessages(nextProps.messages.reverse());
 
@@ -99,6 +110,17 @@ export default class MessageContainer extends React.Component {
     //  this.listObj.shouldScroll = true;
     //}
 
+  }
+  onKeyboardChange(e) {
+    //console.log('onKeyboardChange', e) ;
+    const { endCoordinates, startCoordinates } = e;
+
+    if ( endCoordinates.screenY < startCoordinates.screenY ){
+      if ( !this.listObj.autoScroll )
+        this.scrollToBottom( this.listObj.offset + startCoordinates.height, true);
+    } else {
+      console.log('Keyboard CLOSED');
+    }
   }
   shouldComponentUpdate(nextProps, nextState) {
 
@@ -165,8 +187,14 @@ export default class MessageContainer extends React.Component {
     this.listObj.height = layout.height;
 
     if ( this.listObj.contentHeight > this.listObj.height ){
-      console.log('Scroll to bottom');
-      this.scrollToBottom( this.listObj.contentHeight - this.listObj.height);
+      if ( this.listObj.isLoadingEarlier ){
+        console.log('(onLayout) STAY IN PLACE');
+        this.togglescrollToBottomIcon()
+      } else {
+        console.log('(onLayout) Scroll to bottom');
+        if ( this.listObj.autoScroll )
+          this.scrollToBottom( this.listObj.contentHeight - this.listObj.height);
+      }
     }
 
     if ( this.listObj.contentHeight < this.listObj.height &&
@@ -190,6 +218,7 @@ export default class MessageContainer extends React.Component {
         useNativeDriver: true,
       }).start();
       this.listObj.scrollToBottomIcon = true
+      this.listObj.autoScroll = false
     }
 
   }
@@ -200,8 +229,13 @@ export default class MessageContainer extends React.Component {
     this.listObj.contentHeight = contentHeight
 
     if ( this.listObj.contentHeight > this.listObj.height ){
-      console.log('Scroll to bottom');
-      this.scrollToBottom( this.listObj.contentHeight - this.listObj.height);
+      if ( this.listObj.isLoadingEarlier ){
+        console.log('(onContentSizeChange) STAY IN PLACE');
+        this.togglescrollToBottomIcon()
+      } else {
+        console.log('(onContentSizeChange) Scroll to bottom');
+        this.scrollToBottom( this.listObj.contentHeight - this.listObj.height);
+      }
     }
 
     //this.scrollOffset = contentHeight - this.listObj.height;
@@ -258,8 +292,9 @@ export default class MessageContainer extends React.Component {
   //  }
 
   }
-  scrollToBottom(contentHeight){
-    this._scrollViewRef.scrollToOffset({offset: contentHeight, animated:true});
+  scrollToBottom(contentHeight, scrollEnabled = this.listObj.autoScroll){
+    if ( scrollEnabled )
+      this._scrollViewRef.scrollToOffset({offset: contentHeight, animated:true});
   }
   scrollToBottomIcon(){
     return(
@@ -278,7 +313,7 @@ export default class MessageContainer extends React.Component {
               <TouchableOpacity style={{zIndex:9999,
                                         height: '100%', width:'100%',
                                         justifyContent: 'center', alignItems: 'center',}}
-                                onPress={ () => {this.scrollToBottom(this.listObj.contentHeight) } } >
+                                onPress={ () => {this.scrollToBottom(this.listObj.contentHeight - this.listObj.height, true) } } >
                 <Icon name="angle-down" size={15} color="#277d9f" />
               </TouchableOpacity>
           }
@@ -303,6 +338,29 @@ export default class MessageContainer extends React.Component {
       </Animated.View>
     )
   }
+  renderFooter() {
+
+    if (this.props.renderFooter) {
+      const footerProps = {
+        ...this.props,
+      };
+      return this.props.renderFooter(footerProps);
+    }
+    return null;
+  }
+
+  renderLoadEarlier() {
+      if (this.props.loadEarlier === true) {
+        const loadEarlierProps = {
+          ...this.props,
+        };
+        if (this.props.renderLoadEarlier) {
+          return this.props.renderLoadEarlier(loadEarlierProps);
+        }
+        return <LoadEarlier {...loadEarlierProps} />;
+      }
+      return null;
+    }
   render() {
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
@@ -317,8 +375,8 @@ export default class MessageContainer extends React.Component {
             onScroll              = {this.onScroll}
             onScrollEndDrag       = {this.onScrollEnd}
             onContentSizeChange   = {this.onContentSizeChange}
-          //  ListFooterComponent   = {this.renderFooter}
-          //  ListHeaderComponent   = {this.renderHeader}
+            ListFooterComponent   = {this.renderFooter}
+            ListHeaderComponent   = {this.renderLoadEarlier}
             style                 = {{backgroundColor: '#fff'}}
             contentContainerStyle = {{backgroundColor: '#fff'}}
           />
