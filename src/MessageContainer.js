@@ -78,6 +78,9 @@ export default class MessageContainer extends React.Component {
     this.keyboardWillChangeFrameListener.remove();
   }
   componentWillReceiveProps(nextProps) {
+    console.log('componentWillReceiveProps ');
+
+
 
     if ( nextProps.isLoadingEarlier ){
       this.listObj.isLoadingEarlier = true
@@ -85,11 +88,19 @@ export default class MessageContainer extends React.Component {
       this.listObj.isLoadingEarlier = false
     }
 
+    if ( this.props.messages.length == nextProps.messages.length &&
+         this.props.messages[this.props.messages.length - 1] != nextProps.messages[this.props.messages.length - 1]  ){
+
+      const messagesData = this.prepareMessages(nextProps.messages.reverse());
+      this.setState({
+        dataSource: messagesData,
+      });
+    }
 
     if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
       return;
     }
-    console.log('componentWillReceiveProps ');
+
     console.log('this.listObj.isLoadingEarlier', this.listObj.isLoadingEarlier);
 
     if ( this.listObj.scrollToBottomIcon &&
@@ -136,6 +147,9 @@ export default class MessageContainer extends React.Component {
       console.log('shouldComponentUpdate state new: true');
       return true;
     }
+
+
+
     console.log('shouldComponentUpdate: false');
     return false;
   }
