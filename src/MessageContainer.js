@@ -58,7 +58,7 @@ export default class MessageContainer extends React.Component {
       isLoadingEarlier    : false
     }
 
-    const messagesData = this.prepareMessages(props.messages.reverse());
+    const messagesData = this.prepareMessages(props.messages);
 
     this.state = {
       dataSource          : messagesData,
@@ -91,7 +91,7 @@ export default class MessageContainer extends React.Component {
     if ( this.props.messages.length == nextProps.messages.length &&
          this.props.messages[this.props.messages.length - 1] != nextProps.messages[this.props.messages.length - 1]  ){
 
-      const messagesData = this.prepareMessages(nextProps.messages.reverse());
+      const messagesData = this.prepareMessages(this.props.messages);
       this.setState({
         dataSource: messagesData,
       });
