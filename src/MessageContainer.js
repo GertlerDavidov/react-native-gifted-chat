@@ -95,9 +95,13 @@ export default class MessageContainer extends React.Component {
     if ( this.listObj.scrollToBottomIcon &&
          !this.listObj.isLoadingEarlier &&
          nextProps.messages.length > this.props.messages.length ){
-      this.setState({
-        newMessagesCounter: this.state.newMessagesCounter + (1)
-      })
+      if ( nextProps.messages[0].user._id == this.props.user._id ){
+        this.scrollToBottom( this.listObj.contentHeight - this.listObj.height, true);
+      }
+      else
+        this.setState({
+          newMessagesCounter: this.state.newMessagesCounter + (1)
+        })
     }
 
     const messagesData = this.prepareMessages(nextProps.messages.reverse());
@@ -267,6 +271,10 @@ export default class MessageContainer extends React.Component {
 
     if ( direction == 'down' && this.listObj.scrollToBottomIcon && diff < 70 ){
       this.togglescrollToBottomIcon()
+      this.listObj.autoScroll = true;
+      this.setState({
+        newMessagesCounter: 0
+      })
     }
 
   //  if ( this.listObj.height < this.listObj.contentHeight ){
@@ -293,6 +301,8 @@ export default class MessageContainer extends React.Component {
 
   }
   scrollToBottom(contentHeight, scrollEnabled = this.listObj.autoScroll){
+    console.log('scrollEnabled: ', scrollEnabled);
+
     if ( scrollEnabled )
       this._scrollViewRef.scrollToOffset({offset: contentHeight, animated:true});
   }
