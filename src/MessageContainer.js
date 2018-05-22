@@ -42,10 +42,6 @@ export default class MessageContainer extends React.Component {
     this.onContentSizeChange  = this.onContentSizeChange.bind(this);
 
     console.log('-->INIT CHAT Step 1 <--');
-    console.log('Load messages count: ', this.props.messages.length);
-    console.log('InputToolbar Height: ', this.props.inputToolbarHeight);
-    console.log('listParentHeight/listHeight: ', Dimensions.get('window').height - 54 - this.props.inputToolbarHeight);
-    console.log('--> END INIT CHAT <--');
 
     this.listObj = {
       height              : Dimensions.get('window').height - 54 - this.props.inputToolbarHeight,
@@ -358,7 +354,6 @@ export default class MessageContainer extends React.Component {
       return null;
     }
   render() {
-    console.log('render', this.state.dataSource);
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
           {this.scrollToBottomIcon()}
