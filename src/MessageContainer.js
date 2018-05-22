@@ -8,7 +8,7 @@
 
 import PropTypes from 'prop-types';
 import React      from 'react';
-
+const _          = require('underscore');
 import { FlatList, View, StyleSheet, Keyboard, Dimensions, Animated, Text, TouchableOpacity, Platform } from 'react-native';
 
 import shallowequal from 'shallowequal';
@@ -83,14 +83,19 @@ export default class MessageContainer extends React.Component {
       this.listObj.isLoadingEarlier = false
     }
 
-    if ( this.props.messages.length == nextProps.messages.length &&
-         this.props.messages[this.props.messages.length - 1] != nextProps.messages[this.props.messages.length - 1]  ){
-
-      const messagesData = this.prepareMessages(this.props.messages);
-      this.setState({
-        dataSource: messagesData,
-      });
-    }
+    if ( !_.isUndefined(this.props.messages[this.props.messages.length - 1]) )
+      if ( this.props.messages[this.props.messages.length - 1]._id == this.state.dataSource[this.state.dataSource.length - 1]._id &&
+           this.props.messages[this.props.messages.length - 1].voiceFileName != this.state.dataSource[this.state.dataSource.length - 1].voiceFileName  ){
+             const messagesData = this.prepareMessages(this.props.messages);
+              this.setState({
+               dataSource: messagesData,
+              });
+           }
+    //if ( this.props.messages.length == nextProps.messages.length &&
+    //     this.state.messages[this.props.messages.length - 1] != nextProps.messages[this.props.messages.length - 1]  ){
+    //  console.log('');
+    //
+    //}
 
     if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
       return;
