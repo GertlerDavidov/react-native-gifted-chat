@@ -114,12 +114,19 @@ class GiftedChat extends React.Component {
 
   componentWillUnmount() {
     this.setIsMounted(false);
+    this.setMessages([]);
   }
 
   componentWillReceiveProps(nextProps = {}) {
     const { messages, text } = nextProps;
-    this.setMessages(messages || []);
+
     this.setTextFromProp(text);
+    if ( this._messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
+      return;
+    }
+    this.setMessages(messages || []);
+
+
   }
 
   initLocale() {
@@ -157,6 +164,7 @@ class GiftedChat extends React.Component {
   }
 
   getMessages() {
+    console.log('getMessages', this._messages);
     return this._messages;
   }
 

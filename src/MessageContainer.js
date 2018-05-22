@@ -58,7 +58,7 @@ export default class MessageContainer extends React.Component {
       isLoadingEarlier    : false
     }
 
-    const messagesData = this.prepareMessages(props.messages);
+    const messagesData = this.prepareMessages(props.messages.reverse());
 
     this.state = {
       dataSource          : messagesData,
@@ -73,14 +73,13 @@ export default class MessageContainer extends React.Component {
     this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
   }
   componentWillUnmount(){
+    console.log('(componentWillUnmount) Message container');
     //this.keyboardDidShowListener.remove();
     //this.keyboardDidHideListener.remove();
     this.keyboardWillChangeFrameListener.remove();
   }
   componentWillReceiveProps(nextProps) {
     console.log('componentWillReceiveProps ');
-
-
 
     if ( nextProps.isLoadingEarlier ){
       this.listObj.isLoadingEarlier = true
@@ -120,11 +119,6 @@ export default class MessageContainer extends React.Component {
     this.setState({
       dataSource: messagesData,
     });
-
-    //if ( this.listObj.autoScroll ){
-    //  this.listObj.shouldScroll = true;
-    //}
-
   }
   onKeyboardChange(e) {
     //console.log('onKeyboardChange', e) ;
@@ -159,6 +153,7 @@ export default class MessageContainer extends React.Component {
               const nextMessage = messages[i + 1] || {};
               // add next and previous messages to hash to ensure updates
               const toHash = JSON.stringify(m) + previousMessage._id + nextMessage._id;
+
               o.push({
                 ...m,
                 previousMessage,
@@ -290,29 +285,6 @@ export default class MessageContainer extends React.Component {
         newMessagesCounter: 0
       })
     }
-
-  //  if ( this.listObj.height < this.listObj.contentHeight ){
-      /*
-      if ( direction == 'up' && !this.scrollToBottomIconV && this.scrollOffset < 50 ){
-
-        this.scrollToBottomIconV = true;
-        this.listObj.autoScroll = false
-      }
-
-      if ( direction == 'down' && this.scrollToBottomIconV && this.scrollOffset > 50 ){
-        Animated.timing(this.state.opacity, {
-          toValue: 0,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-        this.scrollToBottomIconV = false;
-        this.setState({
-          newMessagesCounter: 0
-        })
-      }
-      */
-  //  }
-
   }
   scrollToBottom(contentHeight, scrollEnabled = this.listObj.autoScroll){
     console.log('scrollEnabled: ', scrollEnabled);
@@ -386,6 +358,7 @@ export default class MessageContainer extends React.Component {
       return null;
     }
   render() {
+    console.log('render', this.state.dataSource);
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
           {this.scrollToBottomIcon()}
