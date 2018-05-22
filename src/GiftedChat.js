@@ -164,7 +164,6 @@ class GiftedChat extends React.Component {
   }
 
   getMessages() {
-    console.log('getMessages', this._messages);
     return this._messages;
   }
 
