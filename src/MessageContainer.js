@@ -33,7 +33,7 @@ export default class MessageContainer extends React.Component {
     this.onLayout             = this.onLayout.bind(this)
   //  this.onOutterViewLayout   = this.onOutterViewLayout.bind(this)
 
-    this.onScrollEnd          = this.onScrollEnd.bind(this)
+  //  this.onScrollEnd          = this.onScrollEnd.bind(this)
     this.onScroll             = this.onScroll.bind(this)
     //this.onKeyboardDidShow    = this.onKeyboardDidShow.bind(this);
     //this.onKeyboardDidHide    = this.onKeyboardDidHide.bind(this);
@@ -54,13 +54,14 @@ export default class MessageContainer extends React.Component {
       isLoadingEarlier    : false
     }
 
-    const messagesData = this.prepareMessages(props.messages.reverse());
+    const messagesData = this.prepareMessages(props.messages);
 
     this.state = {
       dataSource          : messagesData,
       newMessagesCounter  : 0,
       init                : false,
       opacity             : new Animated.Value(0),
+      padding             : 0,
     };
   }
   componentWillMount(){
@@ -82,27 +83,30 @@ export default class MessageContainer extends React.Component {
     } else if ( !nextProps.isLoadingEarlier && !this.props.isLoadingEarlier ){
       this.listObj.isLoadingEarlier = false
     }
+    if ( !_.isUndefined(this.props.messages[0]) )
+      if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
+           this.props.messages[0].voiceFileName != this.state.dataSource[0].voiceFileName  ){
+         const messagesData = this.prepareMessages(this.props.messages);
 
-    if ( !_.isUndefined(this.props.messages[this.props.messages.length - 1]) )
-      if ( this.props.messages[this.props.messages.length - 1]._id == this.state.dataSource[this.state.dataSource.length - 1]._id &&
-           this.props.messages[this.props.messages.length - 1].voiceFileName != this.state.dataSource[this.state.dataSource.length - 1].voiceFileName  ){
-             const messagesData = this.prepareMessages(this.props.messages);
-              this.setState({
-               dataSource: messagesData,
-              });
-           }
-    //if ( this.props.messages.length == nextProps.messages.length &&
-    //     this.state.messages[this.props.messages.length - 1] != nextProps.messages[this.props.messages.length - 1]  ){
-    //  console.log('');
-    //
-    //}
+          this.setState({
+           dataSource: messagesData,
+          });
+       }
 
     if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
       return;
     }
 
-    console.log('this.listObj.isLoadingEarlier', this.listObj.isLoadingEarlier);
+    if ( nextProps.messages[0].user._id == this.props.user._id ){
+      this.scrollToBottom();
+    } else if ( !this.listObj.autoScroll ){
+      this.setState({
+        newMessagesCounter: this.state.newMessagesCounter + (1)
+      })
+    }
 
+
+    /*
     if ( this.listObj.scrollToBottomIcon &&
          !this.listObj.isLoadingEarlier &&
          nextProps.messages.length > this.props.messages.length ){
@@ -110,12 +114,10 @@ export default class MessageContainer extends React.Component {
         this.scrollToBottom( this.listObj.contentHeight - this.listObj.height, true);
       }
       else
-        this.setState({
-          newMessagesCounter: this.state.newMessagesCounter + (1)
-        })
-    }
 
-    const messagesData = this.prepareMessages(nextProps.messages.reverse());
+    }
+    */
+    const messagesData = this.prepareMessages(nextProps.messages);
 
     this.setState({
       dataSource: messagesData,
@@ -126,11 +128,24 @@ export default class MessageContainer extends React.Component {
     const { endCoordinates, startCoordinates } = e;
 
     if ( endCoordinates.screenY < startCoordinates.screenY ){
-      if ( !this.listObj.autoScroll )
-        this.scrollToBottom( this.listObj.offset + startCoordinates.height, true);
+      console.log('Keyboard opened: ', this.listObj.height );
+      console.log('Keyboard details: ', e );
+      if ( this.listObj.contentHeight != 0 &&
+           this.listObj.contentHeight < ( this.listObj.height - endCoordinates.height ) ){
+        this.setState({
+          padding: this.listObj.height - endCoordinates.height - this.listObj.contentHeight
+        })
+      }
     } else {
       console.log('Keyboard CLOSED');
+      if ( this.listObj.contentHeight != 0 &&
+           this.listObj.contentHeight < ( this.listObj.height + endCoordinates.height ) ){
+        this.setState({
+          padding: this.listObj.height + endCoordinates.height - this.listObj.contentHeight
+        })
+      }
     }
+
   }
   shouldComponentUpdate(nextProps, nextState) {
 
@@ -142,16 +157,13 @@ export default class MessageContainer extends React.Component {
       console.log('shouldComponentUpdate state new: true');
       return true;
     }
-
-
-
     console.log('shouldComponentUpdate: false');
     return false;
   }
   prepareMessages(messages) {
     return messages.reduce((o, m, i) => {
-              const previousMessage = messages[i - 1] || {};
-              const nextMessage = messages[i + 1] || {};
+              const previousMessage = messages[i + 1] || {};
+              const nextMessage = messages[i - 1] || {};
               // add next and previous messages to hash to ensure updates
               const toHash = JSON.stringify(m) + previousMessage._id + nextMessage._id;
 
@@ -196,76 +208,41 @@ export default class MessageContainer extends React.Component {
   }
   onLayout(e) {
     const { layout } = e.nativeEvent;
-    console.log('(onLayout) List height: ', layout.height);
-    console.log('(onLayout) List content height: ', this.listObj.contentHeight);
     this.listObj.height = layout.height;
-
-    if ( this.listObj.contentHeight > this.listObj.height ){
-      if ( this.listObj.isLoadingEarlier ){
-        console.log('(onLayout) STAY IN PLACE');
-        this.togglescrollToBottomIcon()
-      } else {
-        console.log('(onLayout) Scroll to bottom');
-        if ( this.listObj.autoScroll )
-          this.scrollToBottom( this.listObj.contentHeight - this.listObj.height);
-      }
-    }
-
-    if ( this.listObj.contentHeight < this.listObj.height &&
-         this.listObj.scrollToBottomIcon ){
-      this.togglescrollToBottomIcon()
-    }
   }
 
-  togglescrollToBottomIcon(){
-    if ( this.listObj.scrollToBottomIcon ){
+  togglescrollToBottomIcon(status){
+    if ( !status ){
       Animated.timing(this.state.opacity, {
         toValue: 0,
-        duration: 500,
+        duration: 250,
         useNativeDriver: true,
-      }).start();
-      this.listObj.scrollToBottomIcon = false
+      }).start( ()=> this.setState({ newMessagesCounter: 0}) );
     } else {
       Animated.timing(this.state.opacity, {
         toValue: 1,
-        duration: 500,
+        duration: 250,
         useNativeDriver: true,
       }).start();
-      this.listObj.scrollToBottomIcon = true
-      this.listObj.autoScroll = false
     }
-
   }
 
   onContentSizeChange(contentWidth, contentHeight){
     console.log('(onContentSizeChange) List height:', this.listObj.height);
     console.log('(onContentSizeChange) List content height:', contentHeight);
     this.listObj.contentHeight = contentHeight
-
-    if ( this.listObj.contentHeight > this.listObj.height ){
-      if ( this.listObj.isLoadingEarlier ){
-        console.log('(onContentSizeChange) STAY IN PLACE');
-        this.togglescrollToBottomIcon()
-      } else {
-        console.log('(onContentSizeChange) Scroll to bottom');
-        this.scrollToBottom( this.listObj.contentHeight - this.listObj.height);
-      }
+    if ( this.listObj.contentHeight != 0 && this.listObj.contentHeight < this.listObj.height ){
+      console.log(this.listObj.height - this.listObj.contentHeight);
+      this.setState({
+        padding: this.listObj.height - this.listObj.contentHeight
+      })
+    } else if ( this.listObj.contentHeight >= this.listObj.height ) {
+      this.setState({
+        padding: 0
+      })
     }
-
-    //this.scrollOffset = contentHeight - this.listObj.height;
-
-    //if ( this.listObj.autoScroll ){
-      //if ( this.listObj.height < contentHeight)
-      //  this.scrollToBottom(contentHeight)
-      //this.listObj,shouldScroll = false
-    //}
   }
-  onScrollEnd(e) {
-    let contentOffset = e.nativeEvent.contentOffset;
-    console.log('Scroll position:',contentOffset.y);
-    this.listObj.offset    = contentOffset.y;
-    this.listObj.scrollPos = contentOffset.y;
-  }
+
   onScroll(e){
     let contentOffset = e.nativeEvent.contentOffset;
     var currentOffset = contentOffset.y;
@@ -275,23 +252,17 @@ export default class MessageContainer extends React.Component {
 
     let diff = ((this.listObj.contentHeight - this.listObj.height) - this.listObj.offset);
 
-    if ( direction == 'up' && !this.listObj.scrollToBottomIcon && diff > 80 ){
-      this.togglescrollToBottomIcon()
-    }
-
-    if ( direction == 'down' && this.listObj.scrollToBottomIcon && diff < 70 ){
-      this.togglescrollToBottomIcon()
+    if ( contentOffset.y > 50 ){
+      this.togglescrollToBottomIcon(true)
+      this.listObj.autoScroll = false;
+    } else {
+      this.togglescrollToBottomIcon(false)
       this.listObj.autoScroll = true;
-      this.setState({
-        newMessagesCounter: 0
-      })
     }
   }
   scrollToBottom(contentHeight, scrollEnabled = this.listObj.autoScroll){
     console.log('scrollEnabled: ', scrollEnabled);
-
-    if ( scrollEnabled )
-      this._scrollViewRef.scrollToOffset({offset: contentHeight, animated:true});
+    this._scrollViewRef.scrollToOffset({offset: 0, animated:true});
   }
   scrollToBottomIcon(){
     return(
@@ -308,9 +279,9 @@ export default class MessageContainer extends React.Component {
         <IconBadge
           MainElement={
               <TouchableOpacity style={{zIndex:9999,
-                                        height: '100%', width:'100%',
+                                        height: 30, width:30,
                                         justifyContent: 'center', alignItems: 'center',}}
-                                onPress={ () => {this.scrollToBottom(this.listObj.contentHeight - this.listObj.height, true) } } >
+                                onPress={ () => { this.scrollToBottom() } } >
                 <Icon name="angle-down" size={15} color="#277d9f" />
               </TouchableOpacity>
           }
@@ -324,7 +295,7 @@ export default class MessageContainer extends React.Component {
           }
           IconBadgeStyle={{
             height:15,
-            left: 5 ,
+            right: -5 ,
             top: -5,
             position:'absolute',
             paddingHorizontal: 5,
@@ -358,6 +329,11 @@ export default class MessageContainer extends React.Component {
       }
       return null;
     }
+
+  onOutterViewLayout(e){
+    const { layout } = e.nativeEvent;
+  }
+
   render() {
     return (
       <View onLayout={this.onOutterViewLayout} style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
@@ -370,12 +346,12 @@ export default class MessageContainer extends React.Component {
             onLayout              = {this.onLayout}
             onMomentumScrollEnd   = {this.onScrollEnd}
             onScroll              = {this.onScroll}
-            onScrollEndDrag       = {this.onScrollEnd}
             onContentSizeChange   = {this.onContentSizeChange}
-            ListFooterComponent   = {this.renderFooter}
-            ListHeaderComponent   = {this.renderLoadEarlier}
-            style                 = {{backgroundColor: '#fff'}}
-            contentContainerStyle = {{backgroundColor: '#fff'}}
+            ListFooterComponent   = {this.renderLoadEarlier}
+            ListHeaderComponent   = {this.renderFooter}
+            style                 = {{backgroundColor: '#FFF', paddingTop: this.state.padding}}
+            contentContainerStyle = {{backgroundColor: '#FFF'}}
+            inverted              = {true}
           />
       </View>
     );
