@@ -20,6 +20,80 @@ import Message from './Message';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconBadge                   from 'react-native-icon-badge';
 import RotateText                  from "react-native-ticker";
+var deepDiffMapper = function() {
+    return {
+        VALUE_CREATED: 'created',
+        VALUE_UPDATED: 'updated',
+        VALUE_DELETED: 'deleted',
+        VALUE_UNCHANGED: 'unchanged',
+        map: function(obj1, obj2) {
+            if (this.isFunction(obj1) || this.isFunction(obj2)) {
+                throw 'Invalid argument. Function given, object expected.';
+            }
+            if (this.isValue(obj1) || this.isValue(obj2)) {
+                return {
+                    type: this.compareValues(obj1, obj2),
+                    data: (obj1 === undefined) ? obj2 : obj1
+                };
+            }
+
+            var diff = {};
+            for (var key in obj1) {
+                if (this.isFunction(obj1[key])) {
+                    continue;
+                }
+
+                var value2 = undefined;
+                if ('undefined' != typeof(obj2[key])) {
+                    value2 = obj2[key];
+                }
+
+                diff[key] = this.map(obj1[key], value2);
+            }
+            for (var key in obj2) {
+                if (this.isFunction(obj2[key]) || ('undefined' != typeof(diff[key]))) {
+                    continue;
+                }
+
+                diff[key] = this.map(undefined, obj2[key]);
+            }
+
+            return diff;
+
+        },
+        compareValues: function(value1, value2) {
+            if (value1 === value2) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
+            		return this.VALUE_UNCHANGED;
+            }
+            if ('undefined' == typeof(value1)) {
+                return this.VALUE_CREATED;
+            }
+            if ('undefined' == typeof(value2)) {
+                return this.VALUE_DELETED;
+            }
+
+            return this.VALUE_UPDATED;
+        },
+        isFunction: function(obj) {
+            return {}.toString.apply(obj) === '[object Function]';
+        },
+        isArray: function(obj) {
+            return {}.toString.apply(obj) === '[object Array]';
+        },
+        isObject: function(obj) {
+            return {}.toString.apply(obj) === '[object Object]';
+        },
+        isDate: function(obj) {
+            return {}.toString.apply(obj) === '[object Date]';
+        },
+        isValue: function(obj) {
+            return !this.isObject(obj) && !this.isArray(obj);
+        }
+    }
+}();
 export default class MessageContainer extends React.Component {
 
   constructor(props) {
@@ -27,31 +101,20 @@ export default class MessageContainer extends React.Component {
 
     this.renderRow            = this.renderRow.bind(this);
     this.renderFooter         = this.renderFooter.bind(this);
-    //this.renderHeader         = this.renderHeader.bind(this);
     this.renderLoadEarlier    = this.renderLoadEarlier.bind(this);
 
     this.onLayout             = this.onLayout.bind(this)
-  //  this.onOutterViewLayout   = this.onOutterViewLayout.bind(this)
-
-  //  this.onScrollEnd          = this.onScrollEnd.bind(this)
     this.onScroll             = this.onScroll.bind(this)
-    //this.onKeyboardDidShow    = this.onKeyboardDidShow.bind(this);
-    //this.onKeyboardDidHide    = this.onKeyboardDidHide.bind(this);
     this.onKeyboardChange     = this.onKeyboardChange.bind(this);
-
     this.onContentSizeChange  = this.onContentSizeChange.bind(this);
 
     console.log('-->INIT CHAT Step 1 <--');
-
+    this.newMessages = null
     this.listObj = {
       height              : Dimensions.get('window').height - 54 - this.props.inputToolbarHeight,
-      scrollPos           : 0,
       contentHeight       : 0,
       autoScroll          : true,
-      shouldScroll        : (this.props.messages.length != 0) ? true : false,
       scrollToBottomIcon  : false,
-      offset              : 0,
-      isLoadingEarlier    : false
     }
 
     const messagesData = this.prepareMessages(props.messages);
@@ -64,30 +127,26 @@ export default class MessageContainer extends React.Component {
       padding             : 0,
     };
   }
+  componentDidMount(){
+    console.log('componentDidMount');
+  }
   componentWillMount(){
-    //this.keyboardDidShowListener         = Keyboard.addListener('keyboardDidShow', this.onKeyboardDidShow);
-    //this.keyboardDidHideListener         = Keyboard.addListener('keyboardDidHide', this.onKeyboardDidHide);
     this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
   }
   componentWillUnmount(){
     console.log('(componentWillUnmount) Message container');
-    //this.keyboardDidShowListener.remove();
-    //this.keyboardDidHideListener.remove();
     this.keyboardWillChangeFrameListener.remove();
   }
   componentWillReceiveProps(nextProps) {
     console.log('componentWillReceiveProps ');
 
-    if ( nextProps.isLoadingEarlier ){
-      this.listObj.isLoadingEarlier = true
-    } else if ( !nextProps.isLoadingEarlier && !this.props.isLoadingEarlier ){
-      this.listObj.isLoadingEarlier = false
-    }
+    //let result = deepDiffMapper.map(nextProps.messages, this.props.messages);
+    //console.log('Messages Container props diff:', result )
+
     if ( !_.isUndefined(this.props.messages[0]) )
       if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
            this.props.messages[0].voiceFileName != this.state.dataSource[0].voiceFileName  ){
          const messagesData = this.prepareMessages(this.props.messages);
-
           this.setState({
            dataSource: messagesData,
           });
@@ -97,39 +156,30 @@ export default class MessageContainer extends React.Component {
       return;
     }
 
-    if ( nextProps.messages[0].user._id == this.props.user._id ){
+    const messagesData = this.prepareMessages(nextProps.messages);
+
+    if ( nextProps.messages[0].user._id == this.props.user._id && !this.listObj.autoScroll){
       this.scrollToBottom();
-    } else if ( !this.listObj.autoScroll ){
+      this.setState({ dataSource: messagesData });
+    }
+
+    if ( nextProps.messages[0].user._id != this.props.user._id &&
+         !this.listObj.autoScroll &&
+         !this.props.isLoadingEarlier ){
+      this.newMessages = messagesData;
       this.setState({
         newMessagesCounter: this.state.newMessagesCounter + (1)
       })
     }
 
-
-    /*
-    if ( this.listObj.scrollToBottomIcon &&
-         !this.listObj.isLoadingEarlier &&
-         nextProps.messages.length > this.props.messages.length ){
-      if ( nextProps.messages[0].user._id == this.props.user._id ){
-        this.scrollToBottom( this.listObj.contentHeight - this.listObj.height, true);
-      }
-      else
-
+    if ( this.listObj.autoScroll || this.props.isLoadingEarlier){
+      this.setState({ dataSource: messagesData });
     }
-    */
-    const messagesData = this.prepareMessages(nextProps.messages);
-
-    this.setState({
-      dataSource: messagesData,
-    });
   }
   onKeyboardChange(e) {
-    //console.log('onKeyboardChange', e) ;
     const { endCoordinates, startCoordinates } = e;
 
     if ( endCoordinates.screenY < startCoordinates.screenY ){
-      console.log('Keyboard opened: ', this.listObj.height );
-      console.log('Keyboard details: ', e );
       if ( this.listObj.contentHeight != 0 &&
            this.listObj.contentHeight < ( this.listObj.height - endCoordinates.height ) ){
         this.setState({
@@ -137,7 +187,6 @@ export default class MessageContainer extends React.Component {
         })
       }
     } else {
-      console.log('Keyboard CLOSED');
       if ( this.listObj.contentHeight != 0 &&
            this.listObj.contentHeight < ( this.listObj.height + endCoordinates.height ) ){
         this.setState({
@@ -148,7 +197,6 @@ export default class MessageContainer extends React.Component {
 
   }
   shouldComponentUpdate(nextProps, nextState) {
-
     if (!shallowequal(this.props, nextProps)) {
       console.log('shouldComponentUpdate props new: true');
       return true;
@@ -207,10 +255,10 @@ export default class MessageContainer extends React.Component {
     return <Message {...messageProps} />;
   }
   onLayout(e) {
+    console.log('onLayout');
     const { layout } = e.nativeEvent;
     this.listObj.height = layout.height;
   }
-
   togglescrollToBottomIcon(status){
     if ( !status ){
       Animated.timing(this.state.opacity, {
@@ -228,40 +276,50 @@ export default class MessageContainer extends React.Component {
   }
 
   onContentSizeChange(contentWidth, contentHeight){
-    console.log('(onContentSizeChange) List height:', this.listObj.height);
-    console.log('(onContentSizeChange) List content height:', contentHeight);
+    console.log('onContentSizeChange');
+    console.log('contentHeight', contentHeight);
+
+    if ( contentHeight == this.listObj.contentHeight ){
+      console.log('Do nothing - End');
+      return
+    }
+
+    let contentChange = contentHeight - this.listObj.contentHeight;
     this.listObj.contentHeight = contentHeight
+    /*
     if ( this.listObj.contentHeight != 0 && this.listObj.contentHeight < this.listObj.height ){
-      console.log(this.listObj.height - this.listObj.contentHeight);
+      console.log('Set padding to - ', this.listObj.height - this.listObj.contentHeight);
       this.setState({
         padding: this.listObj.height - this.listObj.contentHeight
       })
     } else if ( this.listObj.contentHeight >= this.listObj.height ) {
+      console.log('Set padding to 0');
       this.setState({
         padding: 0
       })
     }
+    */
   }
 
   onScroll(e){
     let contentOffset = e.nativeEvent.contentOffset;
     var currentOffset = contentOffset.y;
-    var direction = currentOffset > this.listObj.offset ? 'down' : 'up';
-
-    this.listObj.offset = currentOffset;
-
-    let diff = ((this.listObj.contentHeight - this.listObj.height) - this.listObj.offset);
 
     if ( contentOffset.y > 50 ){
       this.togglescrollToBottomIcon(true)
       this.listObj.autoScroll = false;
     } else {
+      if ( !_.isNull(this.newMessages) ){
+        this.setState({
+           dataSource: this.newMessages
+        })
+        this.newMessages = null
+      }
       this.togglescrollToBottomIcon(false)
       this.listObj.autoScroll = true;
     }
   }
-  scrollToBottom(contentHeight, scrollEnabled = this.listObj.autoScroll){
-    console.log('scrollEnabled: ', scrollEnabled);
+  scrollToBottom(){
     this._scrollViewRef.scrollToOffset({offset: 0, animated:true});
   }
   scrollToBottomIcon(){
@@ -281,7 +339,15 @@ export default class MessageContainer extends React.Component {
               <TouchableOpacity style={{zIndex:9999,
                                         height: 30, width:30,
                                         justifyContent: 'center', alignItems: 'center',}}
-                                onPress={ () => { this.scrollToBottom() } } >
+                                onPress={ () => {
+                                  if ( !_.isNull(this.newMessages) ){
+                                    this.setState({
+                                       dataSource: this.newMessages
+                                    })
+                                    this.newMessages = null
+                                  }
+                                  this.scrollToBottom()
+                                } }>
                 <Icon name="angle-down" size={15} color="#277d9f" />
               </TouchableOpacity>
           }
@@ -308,7 +374,7 @@ export default class MessageContainer extends React.Component {
   }
   renderFooter() {
 
-    if (this.props.renderFooter) {
+    if (this.props.renderFooter && this.listObj.autoScroll) {
       const footerProps = {
         ...this.props,
       };
@@ -330,17 +396,16 @@ export default class MessageContainer extends React.Component {
       return null;
     }
 
-  onOutterViewLayout(e){
-    const { layout } = e.nativeEvent;
-  }
-
   render() {
+    console.log('RENDER padding:', this.state.padding);
+
     return (
-      <View onLayout={this.onOutterViewLayout} style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
+      <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
           {this.scrollToBottomIcon()}
           <FlatList
             ref                   = {(component) => (this._scrollViewRef = component)}
             keyExtractor          = {this.keyExtractor}
+            bounces               = {false}
             data                  = {this.state.dataSource}
             renderItem            = {this.renderRow}
             onLayout              = {this.onLayout}
@@ -361,8 +426,9 @@ export default class MessageContainer extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    flex:1,
-    backgroundColor: '#000'
+
+    backgroundColor: 'blue',
+
   },
   notInvertedContentContainerStyle: {
     justifyContent: 'flex-end',
