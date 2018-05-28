@@ -10,13 +10,14 @@ import PropTypes from 'prop-types';
 import React      from 'react';
 const _          = require('underscore');
 const __     = require('lodash');
-import { FlatList, View, StyleSheet, Keyboard, Dimensions, Animated, Text, TouchableOpacity, Platform } from 'react-native';
+import { FlatList, View, StyleSheet, Keyboard, Dimensions, Animated, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 
 import shallowequal from 'shallowequal';
 import InvertibleScrollView from 'react-native-invertible-scroll-view';
 import md5 from 'md5';
 import LoadEarlier from './LoadEarlier';
 import Message from './Message';
+import * as Animatable from 'react-native-animatable';
 
 import Icon from 'react-native-vector-icons/FontAwesome';
 import IconBadge                   from 'react-native-icon-badge';
@@ -144,13 +145,15 @@ export default class MessageContainer extends React.Component {
     console.log('Message: ', this.props.messages.length );
     console.log('Message nextProps: ', nextProps.messages.length );
     console.log('Message isEqual: ', __.isEqual(this.props.messages, nextProps.messages));
+    console.log('Message init: ', this.state.init);
 
-    if ( this.props.messages.length == nextProps.messages.length &&
-         this.props.messages.length != 0 && !this.state.init ){
+    if ( this.props.messages.length != nextProps.messages.length &&
+         this.props.messages.length == 0 && !this.state.init ){
       console.log('INIT COMPLETED WITH MESSAGES');
       this.setState({
         init: true
       })
+      this.endLoader()
     }
 
     if ( !_.isUndefined(this.props.messages[0]) )
@@ -199,6 +202,7 @@ export default class MessageContainer extends React.Component {
         this.setState({
           init: true
         })
+        this.endLoader()
       }
     } else {
       console.log('Close Keyboard');
@@ -254,7 +258,6 @@ export default class MessageContainer extends React.Component {
     const messageProps = {
       ...this.props,
       key: message._id,
-      chatInit: this.state.init,
       currentMessage: message,
       previousMessage: message.previousMessage,
       nextMessage: message.nextMessage,
@@ -387,29 +390,48 @@ export default class MessageContainer extends React.Component {
       }
       return null;
     }
+  endLoader(){
+    this._loadingRef.fadeOut(800)
+  }
+  renderLoading(){
+    if ( this.state.dataSource.length == 0 ){
+      return(<Animatable.View ref = {(c) => (this._loadingRef = c)}
+                       style={{position:'absolute',
+                               top:0,
+                               bottom:0,
+                               left:0, right: 0,
+                               zIndex: 99999,
+                               justifyContent:'center',
+                               alignItems:'center',
+                               backgroundColor:'#FFF'}}>
+          <ActivityIndicator animating size="large" />
+      </Animatable.View>)
+    }
 
+  }
   render() {
-    console.log('RENDER');
-
     return (
-      <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
-          {this.scrollToBottomIcon()}
-          <FlatList
-            ref                   = {(component) => (this._scrollViewRef = component)}
-            keyExtractor          = {this.keyExtractor}
-            bounces               = {false}
-            data                  = {this.state.dataSource}
-            renderItem            = {this.renderRow}
-            onLayout              = {this.onLayout}
-            onMomentumScrollEnd   = {this.onScrollEnd}
-            onScroll              = {this.onScroll}
-            onContentSizeChange   = {this.onContentSizeChange}
-            ListFooterComponent   = {this.renderLoadEarlier}
-            ListHeaderComponent   = {this.renderFooter}
-            style                 = {{backgroundColor: '#FFF'}}
-            contentContainerStyle = {{backgroundColor: '#FFF'}}
-            inverted              = {true}
-          />
+      <View style={{flex:1}}>
+        {this.renderLoading()}
+        <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
+            {this.scrollToBottomIcon()}
+            <FlatList
+              ref                   = {(component) => (this._scrollViewRef = component)}
+              keyExtractor          = {this.keyExtractor}
+              bounces               = {false}
+              data                  = {this.state.dataSource}
+              renderItem            = {this.renderRow}
+              onLayout              = {this.onLayout}
+              onMomentumScrollEnd   = {this.onScrollEnd}
+              onScroll              = {this.onScroll}
+              onContentSizeChange   = {this.onContentSizeChange}
+              ListFooterComponent   = {this.renderLoadEarlier}
+              ListHeaderComponent   = {this.renderFooter}
+              style                 = {{backgroundColor: '#FFF'}}
+              contentContainerStyle = {{backgroundColor: '#FFF'}}
+              inverted              = {true}
+            />
+          </View>
       </View>
     );
   }
