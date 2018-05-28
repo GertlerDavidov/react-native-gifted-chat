@@ -150,13 +150,13 @@ export default class MessageContainer extends React.Component {
 
     if ( this.props.messages.length != nextProps.messages.length &&
          this.props.messages.length == 0 && !this.state.init ){
-      console.log('INIT COMPLETED WITH MESSAGES');
       this.endLoader()
     }
 
     if ( !_.isUndefined(this.props.messages[0]) )
       if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
            this.props.messages[0].voiceFileName != this.state.dataSource[0].voiceFileName  ){
+         console.log('ADD VOICE MESSAGE');
          const messagesData = this.prepareMessages(this.props.messages);
           this.setState({
            dataSource: messagesData,
@@ -166,13 +166,14 @@ export default class MessageContainer extends React.Component {
     if ( __.isEqual(this.props.messages, nextProps.messages) ){
       return
     }
+
     //if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
     //  return;
     //}
 
     const messagesData = this.prepareMessages(nextProps.messages);
 
-    if ( nextProps.messages[0].user._id == this.props.user._id && this.keyboardStatus){
+    if ( nextProps.messages[0].user._id == this.props.user._id && ( this.keyboardStatus || this.props.recorderStatus )){
       this.scrollToBottom();
       this.setState({ dataSource: messagesData });
     }
@@ -399,7 +400,7 @@ export default class MessageContainer extends React.Component {
                                justifyContent:'center',
                                alignItems:'center',
                                backgroundColor:'#FFF'}}>
-          <ActivityIndicator animating size="large" />
+          <ActivityIndicator animating size="small" />
       </Animatable.View>)
     }
 
@@ -408,7 +409,7 @@ export default class MessageContainer extends React.Component {
     return (
       <View style={{flex:1}}>
         {this.renderLoading()}
-        <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
+        <View style={[styles.container]}>
             {this.scrollToBottomIcon()}
             <FlatList
               ref                   = {(component) => (this._scrollViewRef = component)}
@@ -421,7 +422,7 @@ export default class MessageContainer extends React.Component {
               onScroll              = {this.onScroll}
               onContentSizeChange   = {this.onContentSizeChange}
               ListFooterComponent   = {this.renderLoadEarlier}
-              ListHeaderComponent   = {this.renderFooter}
+              initialNumToRender    = {50}
               style                 = {{backgroundColor: '#FFF'}}
               contentContainerStyle = {{backgroundColor: '#FFF'}}
               inverted              = {true}
