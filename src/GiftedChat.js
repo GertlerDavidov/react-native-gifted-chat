@@ -83,20 +83,6 @@ class GiftedChat extends React.Component {
     };
   }
 
-  static append(currentMessages = [], messages, inverted = true) {
-    if (!Array.isArray(messages)) {
-      messages = [messages];
-    }
-    return inverted ? messages.concat(currentMessages) : currentMessages.concat(messages);
-  }
-
-  static prepend(currentMessages = [], messages, inverted = true) {
-    if (!Array.isArray(messages)) {
-      messages = [messages];
-    }
-    return inverted ? currentMessages.concat(messages) : messages.concat(currentMessages);
-  }
-
   getChildContext() {
     return {
       actionSheet: () => this._actionSheetRef,
@@ -108,25 +94,17 @@ class GiftedChat extends React.Component {
     const { messages, text } = this.props;
     this.setIsMounted(true);
     this.initLocale();
-    this.setMessages(messages || []);
     this.setTextFromProp(text);
   }
 
   componentWillUnmount() {
     this.setIsMounted(false);
-    this.setMessages([]);
   }
 
   componentWillReceiveProps(nextProps = {}) {
     const { messages, text } = nextProps;
 
     this.setTextFromProp(text);
-    if ( this._messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
-      return;
-    }
-    this.setMessages(messages || []);
-
-
   }
 
   initLocale() {
@@ -313,7 +291,7 @@ class GiftedChat extends React.Component {
       <View style={{flex:1}}>
         <MessageContainer
           {...this.props}
-          messages={this.getMessages()}
+          messages={this.props.messages}
           ref={(component) => (this._messageContainerRef = component)}
           inputToolbarHeight={ ( this.state.inputToolbarHeight == 0 ) ? 41 : this.state.inputToolbarHeight}
         />

@@ -8,11 +8,23 @@ import Avatar from './Avatar';
 import Bubble from './Bubble';
 import SystemMessage from './SystemMessage';
 import Day from './Day';
+import * as Animatable from 'react-native-animatable';
+const __     = require('lodash');
 
 import { isSameUser, isSameDay } from './utils';
 
 export default class Message extends React.Component {
-
+  constructor(props){
+    super(props);
+    this.state = {
+      init: false
+    }
+  }
+  componentDidMount(){
+    this.setState({
+      init: true
+    })
+  }
   getInnerComponentProps() {
     const { containerStyle, ...props } = this.props;
     return {
@@ -63,27 +75,52 @@ export default class Message extends React.Component {
 
   render() {
     const sameUser = isSameUser(this.props.currentMessage, this.props.nextMessage);
-    return (
-      <View>
-        {this.renderDay()}
-        {this.props.currentMessage.system ? (
-          this.renderSystemMessage()
-        ) : (
-          <View
-            style={[
-              styles[this.props.position].container,
-              { marginBottom: sameUser ? 2 : 10 },
-              !this.props.inverted && { marginBottom: 2 },
-              this.props.containerStyle[this.props.position],
-            ]}
-          >
-            {this.props.position === 'left' ? this.renderAvatar() : null}
-            {this.renderBubble()}
-            {this.props.position === 'right' ? this.renderAvatar() : null}
-          </View>
-        )}
-      </View>
-    );
+
+    if ( __.isEmpty(this.props.nextMessage) && this.props.chatInit && !this.state.init){
+      return (
+        <Animatable.View animation="slideInUp" duration={1000}>
+          {this.renderDay()}
+          {this.props.currentMessage.system ? (
+            this.renderSystemMessage()
+          ) : (
+            <View
+              style={[
+                styles[this.props.position].container,
+                { marginBottom: sameUser ? 2 : 10 },
+                !this.props.inverted && { marginBottom: 2 },
+                this.props.containerStyle[this.props.position],
+              ]}
+            >
+              {this.props.position === 'left' ? this.renderAvatar() : null}
+              {this.renderBubble()}
+              {this.props.position === 'right' ? this.renderAvatar() : null}
+            </View>
+          )}
+        </Animatable.View>
+      );
+    }
+    else
+      return (
+        <View>
+          {this.renderDay()}
+          {this.props.currentMessage.system ? (
+            this.renderSystemMessage()
+          ) : (
+            <View
+              style={[
+                styles[this.props.position].container,
+                { marginBottom: sameUser ? 2 : 10 },
+                !this.props.inverted && { marginBottom: 2 },
+                this.props.containerStyle[this.props.position],
+              ]}
+            >
+              {this.props.position === 'left' ? this.renderAvatar() : null}
+              {this.renderBubble()}
+              {this.props.position === 'right' ? this.renderAvatar() : null}
+            </View>
+          )}
+        </View>
+      );
   }
 
 }

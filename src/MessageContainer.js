@@ -9,6 +9,7 @@
 import PropTypes from 'prop-types';
 import React      from 'react';
 const _          = require('underscore');
+const __     = require('lodash');
 import { FlatList, View, StyleSheet, Keyboard, Dimensions, Animated, Text, TouchableOpacity, Platform } from 'react-native';
 
 import shallowequal from 'shallowequal';
@@ -110,9 +111,8 @@ export default class MessageContainer extends React.Component {
 
     console.log('-->INIT CHAT Step 1 <--');
     this.newMessages = null
+    this.keyboardStatus = false;
     this.listObj = {
-      height              : Dimensions.get('window').height - 54 - this.props.inputToolbarHeight,
-      contentHeight       : 0,
       autoScroll          : true,
       scrollToBottomIcon  : false,
     }
@@ -122,9 +122,8 @@ export default class MessageContainer extends React.Component {
     this.state = {
       dataSource          : messagesData,
       newMessagesCounter  : 0,
-      init                : false,
       opacity             : new Animated.Value(0),
-      padding             : 0,
+      init                : false,
     };
   }
   componentDidMount(){
@@ -142,6 +141,17 @@ export default class MessageContainer extends React.Component {
 
     //let result = deepDiffMapper.map(nextProps.messages, this.props.messages);
     //console.log('Messages Container props diff:', result )
+    console.log('Message: ', this.props.messages.length );
+    console.log('Message nextProps: ', nextProps.messages.length );
+    console.log('Message isEqual: ', __.isEqual(this.props.messages, nextProps.messages));
+
+    if ( this.props.messages.length == nextProps.messages.length &&
+         this.props.messages.length != 0 && !this.state.init ){
+      console.log('INIT COMPLETED WITH MESSAGES');
+      this.setState({
+        init: true
+      })
+    }
 
     if ( !_.isUndefined(this.props.messages[0]) )
       if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
@@ -152,13 +162,16 @@ export default class MessageContainer extends React.Component {
           });
        }
 
-    if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
-      return;
+    if ( __.isEqual(this.props.messages, nextProps.messages) ){
+      return
     }
+    //if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
+    //  return;
+    //}
 
     const messagesData = this.prepareMessages(nextProps.messages);
 
-    if ( nextProps.messages[0].user._id == this.props.user._id && !this.listObj.autoScroll){
+    if ( nextProps.messages[0].user._id == this.props.user._id && this.keyboardStatus){
       this.scrollToBottom();
       this.setState({ dataSource: messagesData });
     }
@@ -180,24 +193,22 @@ export default class MessageContainer extends React.Component {
     const { endCoordinates, startCoordinates } = e;
 
     if ( endCoordinates.screenY < startCoordinates.screenY ){
-      if ( this.listObj.contentHeight != 0 &&
-           this.listObj.contentHeight < ( this.listObj.height - endCoordinates.height ) ){
+      console.log('Open Keyboard');
+      this.keyboardStatus = true
+      if ( this.state.dataSource.length == 0 ){
         this.setState({
-          padding: this.listObj.height - endCoordinates.height - this.listObj.contentHeight
+          init: true
         })
       }
     } else {
-      if ( this.listObj.contentHeight != 0 &&
-           this.listObj.contentHeight < ( this.listObj.height + endCoordinates.height ) ){
-        this.setState({
-          padding: this.listObj.height + endCoordinates.height - this.listObj.contentHeight
-        })
-      }
+      console.log('Close Keyboard');
+      this.keyboardStatus = false
     }
 
   }
   shouldComponentUpdate(nextProps, nextState) {
-    if (!shallowequal(this.props, nextProps)) {
+
+    if (!__.isEqual(this.props, nextProps)) {
       console.log('shouldComponentUpdate props new: true');
       return true;
     }
@@ -243,6 +254,7 @@ export default class MessageContainer extends React.Component {
     const messageProps = {
       ...this.props,
       key: message._id,
+      chatInit: this.state.init,
       currentMessage: message,
       previousMessage: message.previousMessage,
       nextMessage: message.nextMessage,
@@ -257,7 +269,6 @@ export default class MessageContainer extends React.Component {
   onLayout(e) {
     console.log('onLayout');
     const { layout } = e.nativeEvent;
-    this.listObj.height = layout.height;
   }
   togglescrollToBottomIcon(status){
     if ( !status ){
@@ -278,27 +289,6 @@ export default class MessageContainer extends React.Component {
   onContentSizeChange(contentWidth, contentHeight){
     console.log('onContentSizeChange');
     console.log('contentHeight', contentHeight);
-
-    if ( contentHeight == this.listObj.contentHeight ){
-      console.log('Do nothing - End');
-      return
-    }
-
-    let contentChange = contentHeight - this.listObj.contentHeight;
-    this.listObj.contentHeight = contentHeight
-    /*
-    if ( this.listObj.contentHeight != 0 && this.listObj.contentHeight < this.listObj.height ){
-      console.log('Set padding to - ', this.listObj.height - this.listObj.contentHeight);
-      this.setState({
-        padding: this.listObj.height - this.listObj.contentHeight
-      })
-    } else if ( this.listObj.contentHeight >= this.listObj.height ) {
-      console.log('Set padding to 0');
-      this.setState({
-        padding: 0
-      })
-    }
-    */
   }
 
   onScroll(e){
@@ -320,6 +310,7 @@ export default class MessageContainer extends React.Component {
     }
   }
   scrollToBottom(){
+    console.log('scrollToBottom');
     this._scrollViewRef.scrollToOffset({offset: 0, animated:true});
   }
   scrollToBottomIcon(){
@@ -375,6 +366,7 @@ export default class MessageContainer extends React.Component {
   renderFooter() {
 
     if (this.props.renderFooter && this.listObj.autoScroll) {
+      console.log('Rendering footer');
       const footerProps = {
         ...this.props,
       };
@@ -397,7 +389,7 @@ export default class MessageContainer extends React.Component {
     }
 
   render() {
-    console.log('RENDER padding:', this.state.padding);
+    console.log('RENDER');
 
     return (
       <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
@@ -414,7 +406,7 @@ export default class MessageContainer extends React.Component {
             onContentSizeChange   = {this.onContentSizeChange}
             ListFooterComponent   = {this.renderLoadEarlier}
             ListHeaderComponent   = {this.renderFooter}
-            style                 = {{backgroundColor: '#FFF', paddingTop: this.state.padding}}
+            style                 = {{backgroundColor: '#FFF'}}
             contentContainerStyle = {{backgroundColor: '#FFF'}}
             inverted              = {true}
           />
