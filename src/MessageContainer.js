@@ -105,6 +105,7 @@ export default class MessageContainer extends React.Component {
     this.renderFooter         = this.renderFooter.bind(this);
     this.renderLoadEarlier    = this.renderLoadEarlier.bind(this);
 
+    this.endLoader            = this.endLoader.bind(this)
     this.onLayout             = this.onLayout.bind(this)
     this.onScroll             = this.onScroll.bind(this)
     this.onKeyboardChange     = this.onKeyboardChange.bind(this);
@@ -124,7 +125,7 @@ export default class MessageContainer extends React.Component {
       dataSource          : messagesData,
       newMessagesCounter  : 0,
       opacity             : new Animated.Value(0),
-      init                : false,
+      init                : ( messagesData.length == 0 ) ? false : true,
     };
   }
   componentDidMount(){
@@ -150,9 +151,6 @@ export default class MessageContainer extends React.Component {
     if ( this.props.messages.length != nextProps.messages.length &&
          this.props.messages.length == 0 && !this.state.init ){
       console.log('INIT COMPLETED WITH MESSAGES');
-      this.setState({
-        init: true
-      })
       this.endLoader()
     }
 
@@ -199,9 +197,6 @@ export default class MessageContainer extends React.Component {
       console.log('Open Keyboard');
       this.keyboardStatus = true
       if ( this.state.dataSource.length == 0 ){
-        this.setState({
-          init: true
-        })
         this.endLoader()
       }
     } else {
@@ -391,10 +386,10 @@ export default class MessageContainer extends React.Component {
       return null;
     }
   endLoader(){
-    this._loadingRef.fadeOut(800)
+    this._loadingRef.fadeOut(1000).then( endState => (endState.finished) ? this.setState({init:true}) : null )
   }
   renderLoading(){
-    if ( this.state.dataSource.length == 0 ){
+    if ( !this.state.init ){
       return(<Animatable.View ref = {(c) => (this._loadingRef = c)}
                        style={{position:'absolute',
                                top:0,
