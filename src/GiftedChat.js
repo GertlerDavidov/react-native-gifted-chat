@@ -413,7 +413,6 @@ class GiftedChat extends React.Component {
   renderChatFooter() {
 
     if (this.props.renderChatFooter) {
-      console.log('Render Chat footer');
       return this.props.renderChatFooter(this.props.isTyping, this.state.inputToolbarHeight);
     }
     return null;

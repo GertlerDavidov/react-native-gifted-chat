@@ -409,7 +409,7 @@ export default class MessageContainer extends React.Component {
     return (
       <View style={{flex:1}}>
         {this.renderLoading()}
-        <View style={[styles.container]}>
+        <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
             {this.scrollToBottomIcon()}
             <FlatList
               ref                   = {(component) => (this._scrollViewRef = component)}
