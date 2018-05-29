@@ -110,8 +110,6 @@ export default class MessageContainer extends React.Component {
     this.onScroll             = this.onScroll.bind(this)
     this.onKeyboardChange     = this.onKeyboardChange.bind(this);
     this.onContentSizeChange  = this.onContentSizeChange.bind(this);
-
-    console.log('-->INIT CHAT Step 1 <--');
     this.newMessages = null
     this.keyboardStatus = false;
     this.listObj = {
@@ -129,24 +127,16 @@ export default class MessageContainer extends React.Component {
     };
   }
   componentDidMount(){
-    console.log('componentDidMount');
   }
   componentWillMount(){
     this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
   }
   componentWillUnmount(){
-    console.log('(componentWillUnmount) Message container');
     this.keyboardWillChangeFrameListener.remove();
   }
   componentWillReceiveProps(nextProps) {
-    console.log('componentWillReceiveProps ');
-
     //let result = deepDiffMapper.map(nextProps.messages, this.props.messages);
     //console.log('Messages Container props diff:', result )
-    console.log('Message: ', this.props.messages.length );
-    console.log('Message nextProps: ', nextProps.messages.length );
-    console.log('Message isEqual: ', __.isEqual(this.props.messages, nextProps.messages));
-    console.log('Message init: ', this.state.init);
 
     if ( this.props.messages.length != nextProps.messages.length &&
          this.props.messages.length == 0 && !this.state.init ){
@@ -156,7 +146,6 @@ export default class MessageContainer extends React.Component {
     if ( !_.isUndefined(this.props.messages[0]) )
       if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
            this.props.messages[0].voiceFileName != this.state.dataSource[0].voiceFileName  ){
-         console.log('ADD VOICE MESSAGE');
          const messagesData = this.prepareMessages(this.props.messages);
           this.setState({
            dataSource: messagesData,
@@ -195,13 +184,11 @@ export default class MessageContainer extends React.Component {
     const { endCoordinates, startCoordinates } = e;
 
     if ( endCoordinates.screenY < startCoordinates.screenY ){
-      console.log('Open Keyboard');
       this.keyboardStatus = true
       if ( this.state.dataSource.length == 0 ){
         this.endLoader()
       }
     } else {
-      console.log('Close Keyboard');
       this.keyboardStatus = false
     }
 
@@ -209,14 +196,11 @@ export default class MessageContainer extends React.Component {
   shouldComponentUpdate(nextProps, nextState) {
 
     if (!__.isEqual(this.props, nextProps)) {
-      console.log('shouldComponentUpdate props new: true');
       return true;
     }
     if (!shallowequal(this.state, nextState)) {
-      console.log('shouldComponentUpdate state new: true');
       return true;
     }
-    console.log('shouldComponentUpdate: false');
     return false;
   }
   prepareMessages(messages) {
@@ -266,7 +250,6 @@ export default class MessageContainer extends React.Component {
     return <Message {...messageProps} />;
   }
   onLayout(e) {
-    console.log('onLayout');
     const { layout } = e.nativeEvent;
   }
   togglescrollToBottomIcon(status){
@@ -286,8 +269,6 @@ export default class MessageContainer extends React.Component {
   }
 
   onContentSizeChange(contentWidth, contentHeight){
-    console.log('onContentSizeChange');
-    console.log('contentHeight', contentHeight);
   }
 
   onScroll(e){
@@ -309,7 +290,6 @@ export default class MessageContainer extends React.Component {
     }
   }
   scrollToBottom(){
-    console.log('scrollToBottom');
     this._scrollViewRef.scrollToOffset({offset: 0, animated:true});
   }
   scrollToBottomIcon(){
@@ -365,7 +345,6 @@ export default class MessageContainer extends React.Component {
   renderFooter() {
 
     if (this.props.renderFooter && this.listObj.autoScroll) {
-      console.log('Rendering footer');
       const footerProps = {
         ...this.props,
       };
