@@ -366,7 +366,7 @@ export default class MessageContainer extends React.Component {
       return null;
     }
   endLoader(){
-    this._loadingRef.fadeOut(1000).then( endState => (endState.finished) ? this.setState({init:true}) : null )
+    this._loadingRef.fadeOut(250).then( endState => (endState.finished) ? this.setState({init:true}) : null )
   }
   renderLoading(){
     if ( !this.state.init ){
