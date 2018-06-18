@@ -127,6 +127,7 @@ export default class MessageContainer extends React.Component {
     };
   }
   componentDidMount(){
+  //  console.log('Recorder: ', this.props.showRecorder);
   }
   componentWillMount(){
     this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
@@ -142,6 +143,10 @@ export default class MessageContainer extends React.Component {
          this.props.messages.length == 0 && !this.state.init ){
       this.endLoader()
     }
+
+    if ( this.props.recorderStatus != nextProps.recorderStatus &&
+         !this.state.init )
+      this.endLoader()
 
     if ( !_.isUndefined(this.props.messages[0]) )
       if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
