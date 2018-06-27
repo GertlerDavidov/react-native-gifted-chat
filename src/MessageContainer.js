@@ -167,19 +167,23 @@ export default class MessageContainer extends React.Component {
 
     const messagesData = this.prepareMessages(nextProps.messages);
 
-    if ( nextProps.messages[0].user._id == this.props.user._id && ( this.keyboardStatus || this.props.recorderStatus )){
-      this.scrollToBottom();
-      this.setState({ dataSource: messagesData });
+    if ( !_.isUndefined(nextProps.messages[0]) ){
+      if ( nextProps.messages[0].user._id == this.props.user._id &&
+         ( this.keyboardStatus || this.props.recorderStatus )){
+        this.scrollToBottom();
+        this.setState({ dataSource: messagesData });
+      }
+
+      if ( nextProps.messages[0].user._id != this.props.user._id &&
+           !this.listObj.autoScroll &&
+           !this.props.isLoadingEarlier ){
+        this.newMessages = messagesData;
+        this.setState({
+          newMessagesCounter: this.state.newMessagesCounter + (1)
+        })
+      }
     }
 
-    if ( nextProps.messages[0].user._id != this.props.user._id &&
-         !this.listObj.autoScroll &&
-         !this.props.isLoadingEarlier ){
-      this.newMessages = messagesData;
-      this.setState({
-        newMessagesCounter: this.state.newMessagesCounter + (1)
-      })
-    }
 
     if ( this.listObj.autoScroll || this.props.isLoadingEarlier){
       this.setState({ dataSource: messagesData });
