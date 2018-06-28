@@ -167,7 +167,7 @@ export default class MessageContainer extends React.Component {
 
     const messagesData = this.prepareMessages(nextProps.messages);
 
-    if ( !_.isUndefined(nextProps.messages[0]) ){
+    if ( !_.isUndefined(nextProps.messages[0]) && !_.isUndefined(nextProps.messages) ){
       if ( nextProps.messages[0].user._id == this.props.user._id &&
          ( this.keyboardStatus || this.props.recorderStatus )){
         this.scrollToBottom();
