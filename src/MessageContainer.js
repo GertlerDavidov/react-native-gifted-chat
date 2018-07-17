@@ -109,6 +109,7 @@ export default class MessageContainer extends React.Component {
     this.onLayout             = this.onLayout.bind(this)
     this.onScroll             = this.onScroll.bind(this)
     this.onKeyboardChange     = this.onKeyboardChange.bind(this);
+    this.onKeyboardDidHide    = this.onKeyboardDidHide.bind(this);
     this.onContentSizeChange  = this.onContentSizeChange.bind(this);
     this.newMessages = null
     this.keyboardStatus = false;
@@ -130,15 +131,21 @@ export default class MessageContainer extends React.Component {
   //  console.log('Recorder: ', this.props.showRecorder);
   }
   componentWillMount(){
-    this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
+    if ( Platform.OS == 'android'){
+      this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardDidShow', this.onKeyboardChange)
+      this.keyboardDidCloseListener = Keyboard.addListener('keyboardDidHide', this.onKeyboardDidHide)
+    }
+    else
+      this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
   }
   componentWillUnmount(){
     this.keyboardWillChangeFrameListener.remove();
+    if ( Platform.OS == 'android')
+      this.keyboardDidCloseListener.remove();
   }
   componentWillReceiveProps(nextProps) {
     //let result = deepDiffMapper.map(nextProps.messages, this.props.messages);
     //console.log('Messages Container props diff:', result )
-
     if ( this.props.messages.length != nextProps.messages.length &&
          this.props.messages.length == 0 && !this.state.init ){
       this.endLoader()
@@ -190,17 +197,25 @@ export default class MessageContainer extends React.Component {
     }
   }
   onKeyboardChange(e) {
-    const { endCoordinates, startCoordinates } = e;
-
-    if ( endCoordinates.screenY < startCoordinates.screenY ){
+    if ( Platform.OS == 'android'){
       this.keyboardStatus = true
       if ( this.state.dataSource.length == 0 ){
         this.endLoader()
       }
     } else {
-      this.keyboardStatus = false
+      const { endCoordinates, startCoordinates } = e;
+      if ( endCoordinates.screenY < startCoordinates.screenY ){
+        this.keyboardStatus = true
+        if ( this.state.dataSource.length == 0 ){
+          this.endLoader()
+        }
+      } else {
+        this.keyboardStatus = false
+      }
     }
-
+  }
+  onKeyboardDidHide(e) {
+    this.keyboardStatus = false
   }
   shouldComponentUpdate(nextProps, nextState) {
 
