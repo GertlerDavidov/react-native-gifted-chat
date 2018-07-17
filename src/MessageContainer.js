@@ -7,50 +7,211 @@
 */
 
 import PropTypes from 'prop-types';
-import React from 'react';
-
-import { ListView, View, StyleSheet } from 'react-native';
+import React      from 'react';
+const _          = require('underscore');
+const __     = require('lodash');
+import { FlatList, View, StyleSheet, Keyboard, Dimensions, Animated, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 
 import shallowequal from 'shallowequal';
 import InvertibleScrollView from 'react-native-invertible-scroll-view';
 import md5 from 'md5';
 import LoadEarlier from './LoadEarlier';
 import Message from './Message';
+import * as Animatable from 'react-native-animatable';
 
+import Icon from 'react-native-vector-icons/FontAwesome';
+import IconBadge                   from 'react-native-icon-badge';
+import RotateText                  from "react-native-ticker";
+var deepDiffMapper = function() {
+    return {
+        VALUE_CREATED: 'created',
+        VALUE_UPDATED: 'updated',
+        VALUE_DELETED: 'deleted',
+        VALUE_UNCHANGED: 'unchanged',
+        map: function(obj1, obj2) {
+            if (this.isFunction(obj1) || this.isFunction(obj2)) {
+                throw 'Invalid argument. Function given, object expected.';
+            }
+            if (this.isValue(obj1) || this.isValue(obj2)) {
+                return {
+                    type: this.compareValues(obj1, obj2),
+                    data: (obj1 === undefined) ? obj2 : obj1
+                };
+            }
+
+            var diff = {};
+            for (var key in obj1) {
+                if (this.isFunction(obj1[key])) {
+                    continue;
+                }
+
+                var value2 = undefined;
+                if ('undefined' != typeof(obj2[key])) {
+                    value2 = obj2[key];
+                }
+
+                diff[key] = this.map(obj1[key], value2);
+            }
+            for (var key in obj2) {
+                if (this.isFunction(obj2[key]) || ('undefined' != typeof(diff[key]))) {
+                    continue;
+                }
+
+                diff[key] = this.map(undefined, obj2[key]);
+            }
+
+            return diff;
+
+        },
+        compareValues: function(value1, value2) {
+            if (value1 === value2) {
+                return this.VALUE_UNCHANGED;
+            }
+            if (this.isDate(value1) && this.isDate(value2) && value1.getTime() === value2.getTime()) {
+            		return this.VALUE_UNCHANGED;
+            }
+            if ('undefined' == typeof(value1)) {
+                return this.VALUE_CREATED;
+            }
+            if ('undefined' == typeof(value2)) {
+                return this.VALUE_DELETED;
+            }
+
+            return this.VALUE_UPDATED;
+        },
+        isFunction: function(obj) {
+            return {}.toString.apply(obj) === '[object Function]';
+        },
+        isArray: function(obj) {
+            return {}.toString.apply(obj) === '[object Array]';
+        },
+        isObject: function(obj) {
+            return {}.toString.apply(obj) === '[object Object]';
+        },
+        isDate: function(obj) {
+            return {}.toString.apply(obj) === '[object Date]';
+        },
+        isValue: function(obj) {
+            return !this.isObject(obj) && !this.isArray(obj);
+        }
+    }
+}();
 export default class MessageContainer extends React.Component {
 
   constructor(props) {
     super(props);
 
-    this.renderRow = this.renderRow.bind(this);
-    this.renderFooter = this.renderFooter.bind(this);
-    this.renderLoadEarlier = this.renderLoadEarlier.bind(this);
-    this.renderScrollComponent = this.renderScrollComponent.bind(this);
+    this.renderRow            = this.renderRow.bind(this);
+    this.renderFooter         = this.renderFooter.bind(this);
+    this.renderLoadEarlier    = this.renderLoadEarlier.bind(this);
 
-    const dataSource = new ListView.DataSource({
-      rowHasChanged: (r1, r2) => {
-        return r1.hash !== r2.hash;
-      },
-    });
+    this.endLoader            = this.endLoader.bind(this)
+    this.onLayout             = this.onLayout.bind(this)
+    this.onScroll             = this.onScroll.bind(this)
+    this.onKeyboardChange     = this.onKeyboardChange.bind(this);
+    this.onContentSizeChange  = this.onContentSizeChange.bind(this);
+    this.newMessages = null
+    this.keyboardStatus = false;
+    this.listObj = {
+      autoScroll          : true,
+      scrollToBottomIcon  : false,
+    }
 
     const messagesData = this.prepareMessages(props.messages);
+
     this.state = {
-      dataSource: dataSource.cloneWithRows(messagesData.blob, messagesData.keys),
+      dataSource          : messagesData,
+      newMessagesCounter  : 0,
+      opacity             : new Animated.Value(0),
+      init                : ( messagesData.length == 0 ) ? false : true,
     };
   }
-
-  componentWillReceiveProps(nextProps) {
-    if (this.props.messages === nextProps.messages) {
-      return;
-    }
-    const messagesData = this.prepareMessages(nextProps.messages);
-    this.setState({
-      dataSource: this.state.dataSource.cloneWithRows(messagesData.blob, messagesData.keys),
-    });
+  componentDidMount(){
+  //  console.log('Recorder: ', this.props.showRecorder);
   }
+  componentWillMount(){
+    if ( Platform.OS == 'android')
+      this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardDidShow', this.onKeyboardChange)
+    else
+      this.keyboardWillChangeFrameListener = Keyboard.addListener('keyboardWillChangeFrame', this.onKeyboardChange)
+  }
+  componentWillUnmount(){
+    this.keyboardWillChangeFrameListener.remove();
+  }
+  componentWillReceiveProps(nextProps) {
+    //let result = deepDiffMapper.map(nextProps.messages, this.props.messages);
+    //console.log('Messages Container props diff:', result )
+    if ( this.props.messages.length != nextProps.messages.length &&
+         this.props.messages.length == 0 && !this.state.init ){
+      this.endLoader()
+    }
 
+    if ( this.props.recorderStatus != nextProps.recorderStatus &&
+         !this.state.init )
+      this.endLoader()
+
+    if ( !_.isUndefined(this.props.messages[0]) )
+      if ( this.props.messages[0]._id == this.state.dataSource[0]._id &&
+           this.props.messages[0].voiceFileName != this.state.dataSource[0].voiceFileName  ){
+         const messagesData = this.prepareMessages(this.props.messages);
+          this.setState({
+           dataSource: messagesData,
+          });
+       }
+
+    if ( __.isEqual(this.props.messages, nextProps.messages) ){
+      return
+    }
+
+    //if ( this.props.messages.length == nextProps.messages.length || nextProps.messages.length == 0) {
+    //  return;
+    //}
+
+    const messagesData = this.prepareMessages(nextProps.messages);
+
+    if ( !_.isUndefined(nextProps.messages[0]) && !_.isUndefined(nextProps.messages) ){
+      if ( nextProps.messages[0].user._id == this.props.user._id &&
+         ( this.keyboardStatus || this.props.recorderStatus )){
+        this.scrollToBottom();
+        this.setState({ dataSource: messagesData });
+      }
+
+      if ( nextProps.messages[0].user._id != this.props.user._id &&
+           !this.listObj.autoScroll &&
+           !this.props.isLoadingEarlier ){
+        this.newMessages = messagesData;
+        this.setState({
+          newMessagesCounter: this.state.newMessagesCounter + (1)
+        })
+      }
+    }
+
+
+    if ( this.listObj.autoScroll || this.props.isLoadingEarlier){
+      this.setState({ dataSource: messagesData });
+    }
+  }
+  onKeyboardChange(e) {
+    if ( Platform.OS == 'android'){
+      this.keyboardStatus = true
+      if ( this.state.dataSource.length == 0 ){
+        this.endLoader()
+      }
+    } else {
+      const { endCoordinates, startCoordinates } = e;
+      if ( endCoordinates.screenY < startCoordinates.screenY ){
+        this.keyboardStatus = true
+        if ( this.state.dataSource.length == 0 ){
+          this.endLoader()
+        }
+      } else {
+        this.keyboardStatus = false
+      }
+    }
+  }
   shouldComponentUpdate(nextProps, nextState) {
-    if (!shallowequal(this.props, nextProps)) {
+
+    if (!__.isEqual(this.props, nextProps)) {
       return true;
     }
     if (!shallowequal(this.state, nextState)) {
@@ -58,54 +219,28 @@ export default class MessageContainer extends React.Component {
     }
     return false;
   }
-
   prepareMessages(messages) {
-    return {
-      keys: messages.map((m) => m._id),
-      blob: messages.reduce((o, m, i) => {
-        const previousMessage = messages[i + 1] || {};
-        const nextMessage = messages[i - 1] || {};
-        // add next and previous messages to hash to ensure updates
-        const toHash = JSON.stringify(m) + previousMessage._id + nextMessage._id;
-        o[m._id] = {
-          ...m,
-          previousMessage,
-          nextMessage,
-          hash: md5(toHash),
-        };
-        return o;
-      }, {}),
-    };
-  }
+    return messages.reduce((o, m, i) => {
+              const previousMessage = messages[i + 1] || {};
+              const nextMessage = messages[i - 1] || {};
+              // add next and previous messages to hash to ensure updates
+              const toHash = JSON.stringify(m) + previousMessage._id + nextMessage._id;
 
-  scrollTo(options) {
-    this._invertibleScrollViewRef.scrollTo(options);
+              o.push({
+                ...m,
+                previousMessage,
+                nextMessage,
+                hash: md5(toHash),
+              });
+              return o;
+            }, [])
   }
-
-  renderLoadEarlier() {
-    if (this.props.loadEarlier === true) {
-      const loadEarlierProps = {
-        ...this.props,
-      };
-      if (this.props.renderLoadEarlier) {
-        return this.props.renderLoadEarlier(loadEarlierProps);
-      }
-      return <LoadEarlier {...loadEarlierProps} />;
-    }
-    return null;
+  keyExtractor = (item, index) => {
+    return item.hash
   }
+  renderRow({item, index}) {
+    let message = item
 
-  renderFooter() {
-    if (this.props.renderFooter) {
-      const footerProps = {
-        ...this.props,
-      };
-      return this.props.renderFooter(footerProps);
-    }
-    return null;
-  }
-
-  renderRow(message) {
     if (!message._id && message._id !== 0) {
       console.warn('GiftedChat: `_id` is missing for message', JSON.stringify(message));
     }
@@ -130,38 +265,165 @@ export default class MessageContainer extends React.Component {
     }
     return <Message {...messageProps} />;
   }
-
-  renderScrollComponent(props) {
-    const { invertibleScrollViewProps } = this.props;
-    return (
-      <InvertibleScrollView
-        {...props}
-        {...invertibleScrollViewProps}
-        ref={(component) => (this._invertibleScrollViewRef = component)}
-      />
-    );
+  onLayout(e) {
+    const { layout } = e.nativeEvent;
+  }
+  togglescrollToBottomIcon(status){
+    if ( !status ){
+      Animated.timing(this.state.opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start( ()=> this.setState({ newMessagesCounter: 0}) );
+    } else {
+      Animated.timing(this.state.opacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
   }
 
-  render() {
-    const contentContainerStyle = this.props.inverted
-      ? {'flexGrow': 1, 'justifyContent': 'flex-end'}
-      : styles.notInvertedContentContainerStyle;
+  onContentSizeChange(contentWidth, contentHeight){
+  }
 
-    return (
-      <View style={styles.container}>
-        <ListView
-          enableEmptySections
-          automaticallyAdjustContentInsets={false}
-          initialListSize={20}
-          pageSize={20}
-          {...this.props.listViewProps}
-          dataSource={this.state.dataSource}
-          contentContainerStyle={contentContainerStyle}
-          renderRow={this.renderRow}
-          renderHeader={this.props.inverted ? this.renderFooter : this.renderLoadEarlier}
-          renderFooter={this.props.inverted ? this.renderLoadEarlier : this.renderFooter}
-          renderScrollComponent={this.renderScrollComponent}
+  onScroll(e){
+    let contentOffset = e.nativeEvent.contentOffset;
+    var currentOffset = contentOffset.y;
+
+    if ( contentOffset.y > 50 ){
+      this.togglescrollToBottomIcon(true)
+      this.listObj.autoScroll = false;
+    } else {
+      if ( !_.isNull(this.newMessages) ){
+        this.setState({
+           dataSource: this.newMessages
+        })
+        this.newMessages = null
+      }
+      this.togglescrollToBottomIcon(false)
+      this.listObj.autoScroll = true;
+    }
+  }
+  scrollToBottom(){
+    this._scrollViewRef.scrollToOffset({offset: 0, animated:true});
+  }
+  scrollToBottomIcon(){
+    return(
+      <Animated.View style={[styles.scrollToBottomIcon,
+                            {opacity: this.state.opacity,
+                             transform: [{
+                               scale: this.state.opacity.interpolate({
+                                 inputRange: [0, 1],
+                                 outputRange: [0.85, 1],
+                               })
+                             },
+                           ],}]}
+                     ref={this.handleViewRef}>
+        <IconBadge
+          MainElement={
+              <TouchableOpacity style={{zIndex:9999,
+                                        height: 30, width:30,
+                                        justifyContent: 'center', alignItems: 'center',}}
+                                onPress={ () => {
+                                  if ( !_.isNull(this.newMessages) ){
+                                    this.setState({
+                                       dataSource: this.newMessages
+                                    })
+                                    this.newMessages = null
+                                  }
+                                  this.scrollToBottom()
+                                } }>
+                <Icon name="angle-down" size={15} color="#277d9f" />
+              </TouchableOpacity>
+          }
+          BadgeElement={
+            <RotateText text={this.state.newMessagesCounter.toString()}
+                        allowFontScaling={false}
+                        textStyle={{fontSize: 10,
+                                    color:'#FFFFFF',
+                                    textAlign: 'center'}}
+                        rotateTime={250} />
+          }
+          IconBadgeStyle={{
+            height:15,
+            right: -5 ,
+            top: -5,
+            position:'absolute',
+            paddingHorizontal: 5,
+            backgroundColor: '#cc1e40'
+          }}
+          Hidden={ (this.state.newMessagesCounter == 0) ? true : false }
         />
+      </Animated.View>
+    )
+  }
+  renderFooter() {
+
+    if (this.props.renderFooter && this.listObj.autoScroll) {
+      const footerProps = {
+        ...this.props,
+      };
+      return this.props.renderFooter(footerProps);
+    }
+    return null;
+  }
+
+  renderLoadEarlier() {
+      if (this.props.loadEarlier === true) {
+        const loadEarlierProps = {
+          ...this.props,
+        };
+        if (this.props.renderLoadEarlier) {
+          return this.props.renderLoadEarlier(loadEarlierProps);
+        }
+        return <LoadEarlier {...loadEarlierProps} />;
+      }
+      return null;
+    }
+  endLoader(){
+    if ( !_.isNull(this._loadingRef) && !_.isUndefined(this._loadingRef) )
+      this._loadingRef.fadeOut(250).then( endState => (endState.finished) ? this.setState({init:true}) : null )
+  }
+  renderLoading(){
+    if ( !this.state.init ){
+      return(<Animatable.View ref = {(c) => (this._loadingRef = c)}
+                       style={{position:'absolute',
+                               top:0,
+                               bottom:0,
+                               left:0, right: 0,
+                               zIndex: 99999,
+                               justifyContent:'center',
+                               alignItems:'center',
+                               backgroundColor:'#FFF'}}>
+          <ActivityIndicator animating size="small" />
+      </Animatable.View>)
+    }
+
+  }
+  render() {
+    return (
+      <View style={{flex:1}}>
+        {this.renderLoading()}
+        <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
+            {this.scrollToBottomIcon()}
+            <FlatList
+              ref                   = {(component) => (this._scrollViewRef = component)}
+              keyExtractor          = {this.keyExtractor}
+              bounces               = {false}
+              data                  = {this.state.dataSource}
+              renderItem            = {this.renderRow}
+              onLayout              = {this.onLayout}
+              onMomentumScrollEnd   = {this.onScrollEnd}
+              onScroll              = {this.onScroll}
+              onContentSizeChange   = {this.onContentSizeChange}
+              ListFooterComponent   = {this.renderLoadEarlier}
+              initialNumToRender    = {50}
+              style                 = {{backgroundColor: '#FFF'}}
+              contentContainerStyle = {{backgroundColor: '#FFF'}}
+              inverted              = {true}
+            />
+          </View>
       </View>
     );
   }
@@ -170,11 +432,26 @@ export default class MessageContainer extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+
+    backgroundColor: 'blue',
+
   },
   notInvertedContentContainerStyle: {
     justifyContent: 'flex-end',
   },
+  scrollToBottomIcon:{
+    borderWidth: 1,
+    borderRadius: 15,
+    borderColor:'#277d9f',
+    height: 30, width: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    zIndex: 99,
+    right: 20,
+    bottom: 20,
+    backgroundColor:'#FFF'
+  }
 });
 
 MessageContainer.defaultProps = {
@@ -186,7 +463,6 @@ MessageContainer.defaultProps = {
   inverted: true,
   loadEarlier: false,
   listViewProps: {},
-  invertibleScrollViewProps: {},
 };
 
 MessageContainer.propTypes = {
@@ -199,5 +475,4 @@ MessageContainer.propTypes = {
   listViewProps: PropTypes.object,
   inverted: PropTypes.bool,
   loadEarlier: PropTypes.bool,
-  invertibleScrollViewProps: PropTypes.object,
 };
