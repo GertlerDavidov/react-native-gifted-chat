@@ -291,6 +291,8 @@ class GiftedChat extends React.Component {
       <View style={{flex:1}}>
         <MessageContainer
           {...this.props}
+          systemMessage={this.props.systemMessage}
+          showSystemMessage={this.props.showSystemMessage}
           messages={this.props.messages}
           ref={(component) => (this._messageContainerRef = component)}
           inputToolbarHeight={ ( this.state.inputToolbarHeight == 0 ) ? 41 : this.state.inputToolbarHeight}
@@ -452,6 +454,8 @@ GiftedChat.childContextTypes = {
 };
 
 GiftedChat.defaultProps = {
+  systemMessage: undefined,
+  showSystemMessage: false,
   messages: [],
   text: undefined,
   placeholder: DEFAULT_PLACEHOLDER,
@@ -510,6 +514,8 @@ GiftedChat.defaultProps = {
 GiftedChat.propTypes = {
   messages: PropTypes.arrayOf(PropTypes.object),
   text: PropTypes.string,
+  systemMessage: PropTypes.string,
+  showSystemMessage: PropTypes.bool,
   placeholder: PropTypes.string,
   messageIdGenerator: PropTypes.func,
   user: PropTypes.object,

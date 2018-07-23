@@ -409,10 +409,18 @@ export default class MessageContainer extends React.Component {
     }
 
   }
+  renderSystemMessage(){
+    if ( this.props.showSystemMessage ){
+      return(<View style={styles.systemMessage}>
+                <Text style={styles.systemMessageText} allowFontScaling={false}>{this.props.systemMessage}</Text>
+             </View>)
+    }
+  }
   render() {
     return (
       <View style={{flex:1}}>
         {this.renderLoading()}
+        {this.renderSystemMessage()}
         <View style={[styles.container,{marginBottom: this.props.inputToolbarHeight}]}>
             {this.scrollToBottomIcon()}
             <FlatList
@@ -440,9 +448,7 @@ export default class MessageContainer extends React.Component {
 
 const styles = StyleSheet.create({
   container: {
-
     backgroundColor: 'blue',
-
   },
   notInvertedContentContainerStyle: {
     justifyContent: 'flex-end',
@@ -459,6 +465,18 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 20,
     backgroundColor:'#FFF'
+  },
+  systemMessage:{
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    width: '100%',
+    height: '100%'
+  },
+  systemMessageText:{
+    fontSize: 13,
+    textAlign: 'center',
+    width: '80%'
   }
 });
 
