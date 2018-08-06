@@ -411,9 +411,14 @@ export default class MessageContainer extends React.Component {
   }
   renderSystemMessage(){
     if ( this.props.showSystemMessage ){
-      return(<View style={styles.systemMessage}>
+      if ( this.state.dataSource.length == 1 )
+        return(<View style={[styles.systemMessageTest]}>
                 <Text style={styles.systemMessageText} allowFontScaling={false}>{this.props.systemMessage}</Text>
              </View>)
+      else
+        return(<View style={[styles.systemMessage, {paddingBottom: this.props.inputToolbarHeight}]}>
+                  <Text style={styles.systemMessageText} allowFontScaling={false}>{this.props.systemMessage}</Text>
+               </View>)
     }
   }
   render() {
@@ -471,7 +476,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 10,
     width: '100%',
-    height: '100%'
+    height: '100%',
+    backgroundColor:'transparent',
+    position:'absolute',
+    top:0,
+    left:0,
+    right:0,
+    bottom:0
+  },
+  systemMessageTest:{
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    width: '100%',
+    backgroundColor:'transparent',
   },
   systemMessageText:{
     fontSize: 13,
