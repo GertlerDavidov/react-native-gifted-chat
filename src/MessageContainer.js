@@ -416,7 +416,7 @@ export default class MessageContainer extends React.Component {
                 <Text style={styles.systemMessageText} allowFontScaling={false}>{this.props.systemMessage}</Text>
              </View>)
       else
-        return(<View style={[styles.systemMessage, {paddingBottom: this.props.inputToolbarHeight}]}>
+        return(<View style={[styles.systemMessage, {paddingBottom: this.props.inputToolbarHeight + (5)}]}>
                   <Text style={styles.systemMessageText} allowFontScaling={false}>{this.props.systemMessage}</Text>
                </View>)
     }
