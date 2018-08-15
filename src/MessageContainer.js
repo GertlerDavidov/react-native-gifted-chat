@@ -492,9 +492,10 @@ const styles = StyleSheet.create({
     backgroundColor:'transparent',
   },
   systemMessageText:{
-    fontSize: 13,
+    fontSize: ( Platform.OS ? 'android') ? 13 : 14,
     textAlign: 'center',
-    width: '80%'
+    width: '80%',
+    color: '#727b7b'
   }
 });
 
