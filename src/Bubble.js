@@ -135,6 +135,41 @@ export default class Bubble extends React.Component {
   }
 
   render() {
+
+    if ( this.props.currentMessage.type == 'imageMessage')
+      return (
+        <View
+          style={[
+            styles[this.props.position].container,
+            this.props.containerStyle[this.props.position],
+          ]}
+        >
+          <View
+            style={[
+              styles[this.props.position].wrapper,
+              this.props.wrapperStyle[this.props.position],
+              this.handleBubbleToNext(),
+              this.handleBubbleToPrevious(),
+            ]}
+          >
+            <TouchableWithoutFeedback
+              onLongPress={this.onLongPress}
+              accessibilityTraits="text"
+              {...this.props.touchableProps}
+            >
+              <View>
+                {this.renderCustomView()}
+                {this.renderMessageImage()}
+                {this.renderMessageText()}
+                <View style={[styles[this.props.position].time]}>
+                  {this.renderTime()}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </View>
+      );
+
     return (
       <View
         style={[
@@ -191,6 +226,16 @@ const styles = {
     containerToPrevious: {
       borderTopLeftRadius: 3,
     },
+    time:{
+      position: 'absolute',
+      left: 5,
+      bottom: 5,
+      backgroundColor: 'rgba(52, 52, 52, 0.8)',
+      borderRadius: 45,
+      padding: 2,
+      paddingLeft: 6,
+      paddingRight: 6,
+    }
   }),
   right: StyleSheet.create({
     container: {
@@ -210,6 +255,16 @@ const styles = {
     containerToPrevious: {
       borderTopRightRadius: 3,
     },
+    time:{
+      position: 'absolute',
+      right: 5,
+      bottom: 5,
+      backgroundColor: 'rgba(52, 52, 52, 0.8)',
+      borderRadius: 45,
+      padding: 2,
+      paddingLeft: 6,
+      paddingRight: 6,
+    }
   }),
   bottom: {
     flexDirection: 'row',
@@ -223,7 +278,7 @@ const styles = {
   tickView: {
     flexDirection: 'row',
     marginRight: 10,
-  },
+  }
 };
 
 Bubble.contextTypes = {

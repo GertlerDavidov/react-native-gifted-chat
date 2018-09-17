@@ -10,6 +10,17 @@ import Color from './Color';
 import { TIME_FORMAT } from './Constant';
 
 export default function Time({ position, containerStyle, currentMessage, timeFormat, textStyle }, context) {
+  if ( currentMessage.type == 'imageMessage')
+    return (
+      <View>
+        <Text style={[styles[position].text, textStyle[position]]}>
+          {moment(currentMessage.createdAt)
+            .locale(context.getLocale())
+            .format(timeFormat)}
+        </Text>
+      </View>
+    );
+
   return (
     <View style={[styles[position].container, containerStyle[position]]}>
       <Text style={[styles[position].text, textStyle[position]]}>
