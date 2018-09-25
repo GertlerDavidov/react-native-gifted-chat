@@ -164,6 +164,7 @@ export default class Bubble extends React.Component {
               this.props.wrapperStyle[this.props.position],
               this.handleBubbleToNext(),
               this.handleBubbleToPrevious(),
+              {backgroundColor:"transparent"}
             ]}
           >
             <TouchableWithoutFeedback
