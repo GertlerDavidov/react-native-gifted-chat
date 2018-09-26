@@ -122,11 +122,11 @@ export default class Bubble extends React.Component {
       if (this.props.renderTime) {
         return this.props.renderTime(timeProps);
       }
-      if ( this.props.currentMessage.type == 'imageMessage' &&
+      if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' &&
            !this.props.currentMessage.voiceFileName )
         return null
       else {
-        if ( this.props.currentMessage.type == 'imageMessage' ){
+        if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' ){
           return (
             <View style={[styles[this.props.position].time]}>
               <Time {...timeProps} />
@@ -164,7 +164,7 @@ export default class Bubble extends React.Component {
               this.props.wrapperStyle[this.props.position],
               this.handleBubbleToNext(),
               this.handleBubbleToPrevious(),
-              {backgroundColor:"transparent"}
+              { backgroundColor: (this.props.currentMessage.voiceFileName) ? "transparent" : ( (this.props.position == 'left' ) ? '#277d9f' : '#54ba47' )  }
             ]}
           >
             <TouchableWithoutFeedback
