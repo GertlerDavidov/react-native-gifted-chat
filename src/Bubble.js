@@ -150,7 +150,7 @@ export default class Bubble extends React.Component {
 
   render() {
 
-    if ( this.props.currentMessage.type == 'imageMessage'){
+    if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage'){
       return (
         <View
           style={[
