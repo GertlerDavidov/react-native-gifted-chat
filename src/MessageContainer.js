@@ -259,6 +259,10 @@ export default class MessageContainer extends React.Component {
       message.user = {};
     }
 
+    if ( message.type.toLowerCase() == 'spacermessage'){
+      return null
+    }
+
     const messageProps = {
       ...this.props,
       key: message._id,
