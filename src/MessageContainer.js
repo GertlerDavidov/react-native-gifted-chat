@@ -439,6 +439,7 @@ export default class MessageContainer extends React.Component {
               data                  = {this.state.dataSource}
               renderItem            = {this.renderRow}
               onLayout              = {this.onLayout}
+              keyboardShouldPersistTaps= {'always'}
               onMomentumScrollEnd   = {this.onScrollEnd}
               onScroll              = {this.onScroll}
               onContentSizeChange   = {this.onContentSizeChange}
