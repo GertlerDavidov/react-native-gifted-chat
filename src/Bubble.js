@@ -122,11 +122,11 @@ export default class Bubble extends React.Component {
       if (this.props.renderTime) {
         return this.props.renderTime(timeProps);
       }
-      if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' &&
+      if ( ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' || this.props.currentMessage.type.toLowerCase() == 'decodedimagemessage') &&
            !this.props.currentMessage.voiceFileName )
         return null
       else {
-        if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' ){
+        if ( ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' || this.props.currentMessage.type.toLowerCase() == 'decodedimagemessage') ){
           return (
             <View style={[styles[this.props.position].time]}>
               <Time {...timeProps} />
@@ -150,7 +150,7 @@ export default class Bubble extends React.Component {
 
   render() {
 
-    if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage'){
+    if ( this.props.currentMessage.type.toLowerCase() == 'imagemessage' || this.props.currentMessage.type.toLowerCase() == 'decodedimagemessage'){
       return (
         <View
           style={[

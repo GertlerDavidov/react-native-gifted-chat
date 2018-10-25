@@ -10,7 +10,7 @@ import Color from './Color';
 import { TIME_FORMAT } from './Constant';
 
 export default function Time({ position, containerStyle, currentMessage, timeFormat, textStyle }, context) {
-  if ( currentMessage.type.toLowerCase() == 'imagemessage')
+  if ( currentMessage.type.toLowerCase() == 'imagemessage' || currentMessage.type.toLowerCase() ==  'decodedimagemessage')
     return (
       <View>
         <Text style={[styles[position].text, textStyle[position]]}>
