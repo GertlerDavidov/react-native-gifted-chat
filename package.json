@@ -31,8 +31,8 @@
     "modulePathIgnorePatterns": ["<rootDir>/example", "<rootDir>/example-expo", "<rootDir>/example-slack-message"]
   },
   "devDependencies": {
-    "@types/react": "^16.0.38",
-    "@types/react-native": "^0.52.12",
+    "@types/react": "16.0.38",
+    "@types/react-native": "0.52.12",
     "babel": "6.23.0",
     "babel-jest": "23.0.0-alpha.0",
     "babel-preset-react-native": "4.0.0",
@@ -55,9 +55,9 @@
     "md5": "2.2.1",
     "moment": "^2.19.0",
     "react-native-communications": "2.2.1",
-    "react-native-invertible-scroll-view": "^1.1.0",
-    "react-native-lightbox": "^0.7.0",
-    "react-native-parsed-text": "^0.0.20",
+    "react-native-invertible-scroll-view": "1.1.0",
+    "react-native-lightbox": "0.7.0",
+    "react-native-parsed-text": "0.0.20",
     "shallowequal": "1.0.2",
     "uuid": "3.2.1"
   },
